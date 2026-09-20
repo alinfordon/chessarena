@@ -7,10 +7,17 @@ const SocketContext = createContext(null);
 
 export function SocketProvider({ children }) {
   const socketRef = useRef(null);
+  const pendingListenersRef = useRef([]);
   const [connected, setConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const tokenRef = useRef(null);
   const usernameRef = useRef(null);
+
+  const attachPendingListeners = useCallback((socket) => {
+    for (const { event, handler } of pendingListenersRef.current) {
+      socket.on(event, handler);
+    }
+  }, []);
 
   const connect = useCallback(() => {
     if (socketRef.current?.connected) {
@@ -27,8 +34,9 @@ export function SocketProvider({ children }) {
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 10000,
-      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      transports: ['polling', 'websocket'],
+      upgrade: true,
       withCredentials: true,
       auth: tokenRef.current
         ? { token: tokenRef.current, username: usernameRef.current || undefined }
@@ -36,7 +44,7 @@ export function SocketProvider({ children }) {
     });
 
     socket.on('connect', () => {
-      console.log('[Socket] Connected');
+      console.log('[Socket] Connected', socket.id, 'via', socket.io?.engine?.transport?.name);
       setConnected(true);
       setReconnecting(false);
     });
@@ -47,8 +55,13 @@ export function SocketProvider({ children }) {
     });
 
     socket.on('connect_error', (err) => {
-      console.error('[Socket] Connection error:', err.message);
-      setConnected(false);
+      const msg = err?.message || String(err);
+      if (msg === 'websocket error') {
+        console.warn('[Socket] WebSocket unavailable, using polling');
+      } else {
+        console.error('[Socket] Connection error:', msg);
+      }
+      setConnected(socket.connected);
     });
 
     socket.on('reconnect', (attempt) => {
@@ -61,9 +74,10 @@ export function SocketProvider({ children }) {
       setReconnecting(true);
     });
 
+    attachPendingListeners(socket);
     socketRef.current = socket;
     return socket;
-  }, []);
+  }, [attachPendingListeners]);
 
   const disconnect = useCallback(() => {
     if (socketRef.current) {
@@ -80,11 +94,14 @@ export function SocketProvider({ children }) {
   }, []);
 
   const on = useCallback((event, handler) => {
-    if (socketRef.current) {
-      socketRef.current.on(event, handler);
-      return () => socketRef.current?.off(event, handler);
-    }
-    return () => {};
+    pendingListenersRef.current.push({ event, handler });
+    socketRef.current?.on(event, handler);
+    return () => {
+      pendingListenersRef.current = pendingListenersRef.current.filter(
+        (l) => !(l.event === event && l.handler === handler)
+      );
+      socketRef.current?.off(event, handler);
+    };
   }, []);
 
   const off = useCallback((event, handler) => {

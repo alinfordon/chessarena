@@ -20,8 +20,6 @@ export function useGame(gameId) {
   const [spectator, setSpectator] = useState(false);
   const [replayIndex, setReplayIndex] = useState(null);
 
-  const joinedRef = useRef(false);
-
   const moves = state?.moves || [];
   const movesLength = moves.length;
 
@@ -77,16 +75,22 @@ export function useGame(gameId) {
   const clearError = useCallback(() => setError(null), []);
 
   const joinGame = useCallback(() => {
-    if (!gameId || joinedRef.current) return;
-    joinedRef.current = true;
+    if (!gameId) return;
     setJoining(true);
     emit('game:join', { gameId }, (ack) => {
       setJoining(false);
       if (!ack?.ok) {
         setError(ack?.error || 'Nu se poate intra în joc');
-        joinedRef.current = false;
-      } else {
-        setSpectator(!!ack?.spectator);
+        return;
+      }
+      setSpectator(!!ack?.spectator);
+      if (ack.state) {
+        setState(ack.state);
+        setClocks({
+          whiteTime: ack.state.whiteTime ?? 0,
+          blackTime: ack.state.blackTime ?? 0,
+          turn: ack.state.turn ?? 'w',
+        });
       }
     });
   }, [gameId, emit]);
@@ -94,14 +98,16 @@ export function useGame(gameId) {
   const leaveGame = useCallback(() => {
     if (!gameId) return;
     emit('game:leave', { gameId });
-    joinedRef.current = false;
   }, [gameId, emit]);
 
   const makeMove = useCallback((from, to, promotion = null) => {
     if (!gameId) return;
     setError(null);
     const opts = { gameId, from, to };
-    if (promotion) opts.promotion = promotion;
+    if (promotion) {
+      const promo = String(promotion).toLowerCase().slice(0, 1);
+      opts.promotion = ['q', 'r', 'b', 'n'].includes(promo) ? promo : 'q';
+    }
     emit('game:move', opts, (ack) => {
       if (!ack?.ok) {
         setError(ack?.error || 'Mutare invalidă');
@@ -149,7 +155,6 @@ export function useGame(gameId) {
 
   useEffect(() => {
     if (!gameId) return undefined;
-    joinGame();
 
     const unsubs = [];
     const add = (event, handler) => {
@@ -171,7 +176,7 @@ export function useGame(gameId) {
     });
 
     add('game:clock', (payload) => {
-      if (payload?.gameId !== gameId) return;
+      if (payload?.gameId && payload.gameId !== gameId) return;
       setClocks({
         whiteTime: payload.whiteTime ?? 0,
         blackTime: payload.blackTime ?? 0,
@@ -210,23 +215,21 @@ export function useGame(gameId) {
     });
 
     add('game:error', (payload) => {
-      if (payload?.gameId !== gameId) return;
+      if (payload?.gameId && payload.gameId !== gameId) return;
       setError(payload?.message || 'Eroare joc');
-    });
-
-    add('disconnect', () => {
-      joinedRef.current = false;
-    });
-
-    add('reconnect', () => {
-      joinGame();
     });
 
     return () => {
       unsubs.forEach((u) => u());
       leaveGame();
     };
-  }, [gameId, on, joinGame, leaveGame]);
+  }, [gameId, on, leaveGame]);
+
+  useEffect(() => {
+    if (!gameId || !connected) return undefined;
+    joinGame();
+    return undefined;
+  }, [gameId, connected, joinGame]);
 
   // Compute FEN for the currently replayed position
   const replayFen = useMemo(() => {

@@ -45,8 +45,20 @@ export async function GET(req, ctx) {
       rematchOfferedBy: doc.rematchOfferedBy || null,
       ratingDeltaWhite: doc.ratingDeltaWhite ?? null,
       ratingDeltaBlack: doc.ratingDeltaBlack ?? null,
-      whitePlayerId: doc.whitePlayer ? String(doc.whitePlayer) : null,
-      blackPlayerId: doc.blackPlayer ? String(doc.blackPlayer) : null,
+      whiteUsername: doc.whiteUsername || doc.whitePlayer?.username || null,
+      blackUsername: doc.blackUsername || doc.blackPlayer?.username || null,
+      whiteRating: doc.whiteRating || doc.whitePlayer?.rating || 1200,
+      blackRating: doc.blackRating || doc.blackPlayer?.rating || 1200,
+      whitePlayerId: doc.whitePlayer?._id
+        ? String(doc.whitePlayer._id)
+        : doc.whitePlayer
+          ? String(doc.whitePlayer)
+          : null,
+      blackPlayerId: doc.blackPlayer?._id
+        ? String(doc.blackPlayer._id)
+        : doc.blackPlayer
+          ? String(doc.blackPlayer)
+          : null,
       whitePlayer: doc.whitePlayer
         ? {
             _id: doc.whitePlayer._id?.toString?.() || doc.whitePlayer,

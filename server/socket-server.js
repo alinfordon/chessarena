@@ -27,8 +27,8 @@ const { formatTime } = require('../utils/time');
   }
 })();
 
-const PORT = process.env.SOCKET_PORT || process.env.PORT || 3021;
-const NEXT_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3022';
+const PORT = process.env.SOCKET_PORT || process.env.PORT || 3001;
+const NEXT_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 const AUTH_SECRET_KEY = new TextEncoder().encode(
   process.env.AUTH_SECRET || 'chess-arena-dev-secret-change-in-production'
@@ -42,7 +42,65 @@ try {
   mongoose = null;
 }
 
-const server = http.createServer((req, res) => {
+function slimLobbyGame(g) {
+  if (!g) return null;
+  return {
+    gameId: g.gameId,
+    status: g.status,
+    initialTime: g.initialTime,
+    increment: g.increment,
+    whiteUsername: g.whiteUsername || null,
+    blackUsername: g.blackUsername || null,
+    whiteRating: g.whiteRating ?? null,
+    blackRating: g.blackRating ?? null,
+    movesCount: Array.isArray(g.moves) ? g.moves.length : 0,
+    isPrivate: !!g.isPrivate,
+    ratingCategory: g.ratingCategory || null,
+    startedAt: g.startedAt || null,
+    createdAt: g.createdAt || null,
+  };
+}
+
+async function broadcastLobbyGame(gameId, extra = {}) {
+  try {
+    const { Game } = await getModels();
+    if (!Game || !gameId) {
+      io.emit('lobby:update', { gameId, ...extra });
+      return;
+    }
+    const doc = await Game.findOne({ gameId }).lean();
+    const slim = slimLobbyGame(doc);
+    if (slim) {
+      io.emit('lobby:new-game', slim);
+      io.emit('lobby:update', { game: { ...slim, ...extra } });
+    } else {
+      io.emit('lobby:update', { gameId, ...extra });
+    }
+  } catch (e) {
+    logError('LobbyBroadcast', e);
+    io.emit('lobby:update', { gameId, ...extra });
+  }
+}
+
+const server = http.createServer(async (req, res) => {
+  try {
+    const url = new URL(req.url || '/', 'http://127.0.0.1');
+    if (url.pathname === '/notify') {
+      const type = url.searchParams.get('type');
+      const gameId = url.searchParams.get('gameId');
+      if ((type === 'lobby-new' || type === 'lobby-update') && gameId) {
+        await broadcastLobbyGame(gameId, type === 'lobby-new' ? { status: 'waiting' } : {});
+      }
+      if (type === 'game-sync' && gameId) {
+        await syncAndBroadcastGame(gameId);
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+      return;
+    }
+  } catch (e) {
+    logError('HTTP', e);
+  }
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(
     JSON.stringify({
@@ -58,10 +116,25 @@ const server = http.createServer((req, res) => {
 
 const io = new Server(server, {
   cors: {
-    origin: [NEXT_APP_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true);
+      const allowed = new Set(
+        [
+          NEXT_APP_URL,
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+          'http://localhost:3001',
+          'http://127.0.0.1:3001',
+        ].filter(Boolean)
+      );
+      if (allowed.has(origin)) return cb(null, true);
+      if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return cb(null, true);
+      cb(null, false);
+    },
     credentials: true,
     methods: ['GET', 'POST'],
   },
+  transports: ['polling', 'websocket'],
   pingInterval: 10000,
   pingTimeout: 15000,
 });
@@ -87,6 +160,61 @@ function log(prefix, ...args) {
 function logError(prefix, err) {
   const ts = new Date().toISOString().substring(11, 19);
   console.error(`[${ts}] [${prefix}]`, err?.message || err, err?.stack || '');
+}
+
+function mongoId(value) {
+  if (value == null || value === '') return null;
+  if (typeof value === 'string') {
+    return value === '[object Object]' ? null : value;
+  }
+  if (typeof value !== 'object') return String(value);
+  if (value._bsontype === 'ObjectId' || value._bsontype === 'ObjectID') {
+    return String(value);
+  }
+  if (typeof value.toHexString === 'function') {
+    try {
+      return value.toHexString();
+    } catch {}
+  }
+  if (value._id && value._id !== value) return mongoId(value._id);
+  if (typeof value.toString === 'function') {
+    const s = value.toString();
+    if (s && s !== '[object Object]') return s;
+  }
+  return null;
+}
+
+function applyDocToManager(gm, doc) {
+  if (!gm || !doc) return;
+  const obj = typeof doc.toObject === 'function' ? doc.toObject() : doc;
+  gm.data.whitePlayer = mongoId(obj.whitePlayer);
+  gm.data.blackPlayer = mongoId(obj.blackPlayer);
+  gm.data.whiteUsername = obj.whiteUsername || null;
+  gm.data.blackUsername = obj.blackUsername || null;
+  gm.data.whiteRating = obj.whiteRating ?? gm.data.whiteRating;
+  gm.data.blackRating = obj.blackRating ?? gm.data.blackRating;
+  gm.data.status = obj.status || gm.data.status;
+  gm.data.startedAt = obj.startedAt || gm.data.startedAt;
+  gm.data.finishedAt = obj.finishedAt || gm.data.finishedAt;
+  gm.data.fen = obj.fen || gm.data.fen;
+  gm.data.turn = obj.turn || gm.data.turn;
+  gm.data.whiteTime = obj.whiteTime ?? gm.data.whiteTime;
+  gm.data.blackTime = obj.blackTime ?? gm.data.blackTime;
+  gm.data.result = obj.result ?? gm.data.result;
+  gm.data.termination = obj.termination ?? gm.data.termination;
+  if (Array.isArray(obj.moves)) gm.data.moves = obj.moves;
+}
+
+function emitGameRoom(gameId, gm) {
+  if (!gm || !gameId) return;
+  const state = gm.getState();
+  io.to(`game:${gameId}`).emit('game:state', state);
+  io.to(`game:${gameId}`).emit('game:clock', {
+    gameId,
+    whiteTime: state.whiteTime,
+    blackTime: state.blackTime,
+    turn: state.turn,
+  });
 }
 
 let _modelsReady = false;
@@ -907,7 +1035,17 @@ class GameManager {
     const fenBefore = this.chess.fen();
     try {
       const moveOpts = { from, to };
-      if (promotion) moveOpts.promotion = promotion;
+      let promo = null;
+      if (promotion != null && promotion !== '') {
+        const p = String(promotion).toLowerCase().replace(/[^qrbn]/g, '').slice(0, 1);
+        promo = ['q', 'r', 'b', 'n'].includes(p) ? p : 'q';
+      } else {
+        const piece = this.chess.get(from);
+        if (piece?.type === 'p' && (to?.[1] === '8' || to?.[1] === '1')) {
+          promo = 'q';
+        }
+      }
+      if (promo) moveOpts.promotion = promo;
       const move = this.chess.move(moveOpts);
       if (!move) return { ok: false, error: 'Invalid move' };
 
@@ -1041,8 +1179,8 @@ class GameManager {
       ratingCategory: this.data.ratingCategory,
       initialTime: this.data.initialTime,
       increment: this.data.increment,
-      whitePlayerId: this.data.whitePlayer ? String(this.data.whitePlayer) : null,
-      blackPlayerId: this.data.blackPlayer ? String(this.data.blackPlayer) : null,
+      whitePlayerId: mongoId(this.data.whitePlayer),
+      blackPlayerId: mongoId(this.data.blackPlayer),
       whiteUsername: this.data.whiteUsername,
       blackUsername: this.data.blackUsername,
       whiteRating: this.data.whiteRating,
@@ -1102,6 +1240,21 @@ class GameManager {
     } catch (e) {
       logError('Database', e);
     }
+  }
+}
+
+async function syncAndBroadcastGame(gameId) {
+  if (!gameId) return;
+  try {
+    let gm = gameManagers.get(gameId) || (await GameManager.restoreFromMongo(gameId));
+    const { Game } = await getModels();
+    if (Game) {
+      const doc = await Game.findOne({ gameId });
+      if (doc && gm) applyDocToManager(gm, doc);
+    }
+    if (gm) emitGameRoom(gameId, gm);
+  } catch (e) {
+    logError('GameSync', e);
   }
 }
 
@@ -1476,15 +1629,17 @@ io.on('connection', async (socket) => {
     }
   });
 
-  socket.on('game:join', async ({ gameId }) => {
+  socket.on('game:join', async ({ gameId }, ack) => {
     try {
-      if (!gameId || typeof gameId !== 'string') return;
+      if (!gameId || typeof gameId !== 'string') {
+        return ack?.({ ok: false, error: 'Invalid game id' });
+      }
       if (userId) {
         const ban = await isUserCurrentlyBanned(userId);
         if (ban) {
           socket.emit('game:error', { code: 'BANNED', message: ban.reason || 'Contul tău este suspendat.' });
           socket.leave(`game:${gameId}`);
-          return;
+          return ack?.({ ok: false, error: ban.reason || 'Cont suspendat' });
         }
       }
       log('Game', `Socket ${socket.id} joining game ${gameId}`);
@@ -1512,48 +1667,55 @@ io.on('connection', async (socket) => {
         gameManagers.set(gameId, gm);
       }
 
-      if (
-        mongoose &&
-        userId &&
-        (gm.data.status === 'waiting' || !gm.data.startedAt)
-      ) {
+      if (mongoose) {
         try {
           const { Game, User } = await getModels();
           if (Game) {
-            let doc = await Game.findOne({ gameId });
+            const doc = await Game.findOne({ gameId });
             if (doc) {
-              if (!doc.whitePlayer && String(doc.blackPlayer) !== String(userId)) {
-                doc.whitePlayer = userId;
-                if (!doc.whiteUsername && User) {
-                  const u = await User.findById(userId).select('username');
-                  doc.whiteUsername = u?.username || null;
-                  doc.whiteRating = u?.[doc.ratingCategory] || u?.rating || 1200;
-                  gm.data.whiteUsername = doc.whiteUsername;
-                  gm.data.whiteRating = doc.whiteRating;
+              applyDocToManager(gm, doc);
+              if (userId) {
+                const whiteId = mongoId(doc.whitePlayer);
+                const blackId = mongoId(doc.blackPlayer);
+                const alreadySeated = whiteId === String(userId) || blackId === String(userId);
+                if (!alreadySeated && (doc.status === 'waiting' || !doc.startedAt)) {
+                  let seated = false;
+                  if (!whiteId && blackId !== String(userId)) {
+                    doc.whitePlayer = userId;
+                    gm.data.whitePlayer = userId;
+                    seated = true;
+                    if (User) {
+                      const u = await User.findById(userId).select('username rating blitzRating rapidRating classicalRating');
+                      doc.whiteUsername = u?.username || username || null;
+                      doc.whiteRating = u?.[doc.ratingCategory] || u?.rating || 1200;
+                      gm.data.whiteUsername = doc.whiteUsername;
+                      gm.data.whiteRating = doc.whiteRating;
+                    }
+                  } else if (!blackId && whiteId !== String(userId)) {
+                    doc.blackPlayer = userId;
+                    gm.data.blackPlayer = userId;
+                    seated = true;
+                    if (User) {
+                      const u = await User.findById(userId).select('username rating blitzRating rapidRating classicalRating');
+                      doc.blackUsername = u?.username || username || null;
+                      doc.blackRating = u?.[doc.ratingCategory] || u?.rating || 1200;
+                      gm.data.blackUsername = doc.blackUsername;
+                      gm.data.blackRating = doc.blackRating;
+                    }
+                  }
+                  if (seated) log('Game', `Seated ${username || userId} in ${gameId}`);
                 }
-                gm.data.whitePlayer = userId;
-              } else if (!doc.blackPlayer && String(doc.whitePlayer) !== String(userId)) {
-                doc.blackPlayer = userId;
-                if (!doc.blackUsername && User) {
-                  const u = await User.findById(userId).select('username');
-                  doc.blackUsername = u?.username || null;
-                  doc.blackRating = u?.[doc.ratingCategory] || u?.rating || 1200;
-                  gm.data.blackUsername = doc.blackUsername;
-                  gm.data.blackRating = doc.blackRating;
+                if (mongoId(doc.whitePlayer) && mongoId(doc.blackPlayer) && doc.status === 'waiting') {
+                  doc.status = 'playing';
+                  doc.startedAt = new Date();
+                  gm.data.status = 'playing';
+                  gm.data.startedAt = doc.startedAt;
+                  gm.lastMoveAt = new Date();
+                  io.emit('lobby:update', { gameId, status: 'playing' });
+                  log('Game', `Game ${gameId} started: ${doc.whiteUsername} vs ${doc.blackUsername}`);
                 }
-                gm.data.blackPlayer = userId;
-              }
-              if (doc.whitePlayer && doc.blackPlayer && doc.status === 'waiting') {
-                doc.status = 'playing';
-                doc.startedAt = new Date();
-                gm.data.status = 'playing';
-                gm.data.startedAt = doc.startedAt;
-                gm.lastMoveAt = new Date();
-                io.emit('lobby:update', { gameId, status: 'playing' });
-              }
-              await doc.save();
-              if (gm.data.status === 'playing' && isBotPlayer(gm.data)) {
-                triggerBotMove(gm, gameId);
+                await doc.save();
+                applyDocToManager(gm, doc);
               }
             }
           }
@@ -1566,11 +1728,16 @@ io.on('connection', async (socket) => {
         triggerBotMove(gm, gameId);
       }
 
-      socket.emit('game:state', gm.getState());
-      socket.emit('game:clock', {
-        whiteTime: gm.data.whiteTime,
-        blackTime: gm.data.blackTime,
-        turn: gm.data.turn,
+      emitGameRoom(gameId, gm);
+
+      const seatedWhite = mongoId(gm.data.whitePlayer);
+      const seatedBlack = mongoId(gm.data.blackPlayer);
+      const spectator = !userId || (seatedWhite !== String(userId) && seatedBlack !== String(userId));
+      ack?.({
+        ok: true,
+        spectator,
+        status: gm.data.status,
+        state: gm.getState(),
       });
 
       if (mongoose) {
@@ -1581,7 +1748,7 @@ io.on('connection', async (socket) => {
               .sort({ createdAt: 1 })
               .limit(30)
               .lean();
-            socket.emit('chat:history', history);
+            socket.emit('chat:history', { gameId, messages: history });
           } catch (e) {
             logError('Database', e);
           }
@@ -1589,6 +1756,7 @@ io.on('connection', async (socket) => {
       }
     } catch (e) {
       logError('Game', e);
+      ack?.({ ok: false, error: 'Internal error' });
     }
   });
 

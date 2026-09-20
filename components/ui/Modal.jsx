@@ -63,9 +63,9 @@ export default function Modal({
                 </h2>
               )}
               {description && (
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   {description}
-                </p>
+                </div>
               )}
             </div>
             {onClose && (

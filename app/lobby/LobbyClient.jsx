@@ -38,6 +38,36 @@ import Modal from '@/components/ui/Modal';
 import { formatTimeCompact, timeAgo } from '@/utils/time';
 import { timeControlToCategory } from '@/utils/chess';
 
+function normalizeLobbyGame(g) {
+  if (!g) return null;
+  return {
+    gameId: g.gameId,
+    status: g.status,
+    initialTime: g.initialTime,
+    increment: g.increment,
+    whiteUsername: g.whiteUsername || g.whitePlayer?.username || null,
+    blackUsername: g.blackUsername || g.blackPlayer?.username || null,
+    whiteRating: g.whiteRating ?? g.whitePlayer?.rating ?? null,
+    blackRating: g.blackRating ?? g.blackPlayer?.rating ?? null,
+    movesCount: typeof g.movesCount === 'number' ? g.movesCount : (g.moves?.length || 0),
+    isPrivate: !!g.isPrivate,
+    inviteCode: g.inviteCode || null,
+    ratingCategory: g.ratingCategory || null,
+    startedAt: g.startedAt || null,
+    createdAt: g.createdAt || null,
+  };
+}
+
+function upsertGame(list, incoming) {
+  const game = normalizeLobbyGame(incoming);
+  if (!game?.gameId) return list;
+  const idx = list.findIndex((g) => g.gameId === game.gameId);
+  if (idx === -1) return [game, ...list];
+  const next = [...list];
+  next[idx] = { ...next[idx], ...game };
+  return next;
+}
+
 export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
   const router = useRouter();
   const { connected, on, off, emit } = useSocket();
@@ -52,9 +82,35 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
   const [copied, setCopied] = useState(null);
 
   useEffect(() => {
-    setGames(initialGames);
-    setOnline(initialOnline);
+    if (initialGames?.length) {
+      setGames(initialGames.map(normalizeLobbyGame).filter(Boolean));
+    }
+    if (initialOnline?.length) setOnline(initialOnline);
   }, [initialGames, initialOnline]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadGames = async () => {
+      try {
+        const res = await fetch('/api/games?status=waiting,playing&limit=50', {
+          cache: 'no-store',
+          credentials: 'include',
+        });
+        const data = await res.json();
+        if (!cancelled && data?.ok && Array.isArray(data.games)) {
+          setGames(data.games.map(normalizeLobbyGame).filter(Boolean));
+        }
+      } catch (e) {
+        console.warn('[Lobby] Failed to refresh games:', e?.message || e);
+      }
+    };
+    loadGames();
+    const timer = setInterval(loadGames, 8000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [connected]);
 
   useEffect(() => {
     const handlers = [];
@@ -63,8 +119,23 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
       handlers.push(unsub);
     };
     add('lobby:update', (payload) => {
-      if (payload?.games) setGames(payload.games);
+      if (Array.isArray(payload?.games)) {
+        setGames(payload.games.map(normalizeLobbyGame).filter(Boolean));
+        return;
+      }
+      if (payload?.game) {
+        setGames((prev) => upsertGame(prev, payload.game));
+        return;
+      }
+      if (payload?.gameId) {
+        setGames((prev) =>
+          prev.map((g) => (g.gameId === payload.gameId ? { ...g, ...payload } : g))
+        );
+      }
       if (payload?.online) setOnline(payload.online);
+    });
+    add('lobby:new-game', (payload) => {
+      setGames((prev) => upsertGame(prev, payload?.game || payload));
     });
     add('user:presence', (payload) => {
       if (payload?.users) setOnline(payload.users);
@@ -73,8 +144,13 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
   }, [on, off]);
 
   const waitingRooms = useMemo(
-    () => games.filter((g) => g.status === 'waiting'),
-    [games]
+    () =>
+      games.filter((g) => {
+        if (g.status !== 'waiting') return false;
+        if (!g.isPrivate) return true;
+        return user && (g.whiteUsername === user.username || g.blackUsername === user.username);
+      }),
+    [games, user]
   );
   const liveGames = useMemo(
     () => games.filter((g) => g.status === 'playing'),
@@ -146,16 +222,19 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
     const movesCount = typeof g.movesCount === 'number' ? g.movesCount : (g.moves?.length || 0);
     const mine =
       user && (g.whiteUsername === user.username || g.blackUsername === user.username);
+    const hasWhite = !!g.whiteUsername;
+    const hasBlack = !!g.blackUsername;
+    const joinable = !isLive && g.status === 'waiting' && (!hasWhite || !hasBlack);
 
     return (
       <div
         className="group flex items-center gap-2 sm:gap-3 p-3 sm:p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors border-b border-slate-100 dark:border-slate-800/60 last:border-0"
       >
         <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
-          <Avatar size="sm" alt={g.whiteUsername || 'Alb'} />
+          <Avatar size="sm" alt={g.whiteUsername || 'Liber'} />
           <div className="min-w-0">
             <div className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
-              {g.whiteUsername || 'Alb'}
+              {g.whiteUsername || 'Liber'}
             </div>
             <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
               {g.whiteRating || '—'}
@@ -225,17 +304,16 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
               )}
               <Button
                 size="sm"
-                variant={g.blackUsername ? 'ghost' : 'success'}
-                onClick={() => handleJoin(g)}
-                disabled={g.blackUsername && !g.isPrivate}
+                variant={joinable ? 'success' : 'ghost'}
+                onClick={() => (joinable ? handleJoin(g) : router.push(`/game/${g.gameId}`))}
               >
-                {g.blackUsername ? (
+                {joinable ? (
                   <>
-                    <Eye size={13} /> Spectate
+                    <Swords size={13} /> Join
                   </>
                 ) : (
                   <>
-                    <Swords size={13} /> Join
+                    <Eye size={13} /> Spectate
                   </>
                 )}
               </Button>

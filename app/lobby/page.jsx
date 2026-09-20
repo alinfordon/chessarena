@@ -18,26 +18,44 @@ async function getInitial() {
       Game.find({ status: { $in: ['waiting', 'playing'] } })
         .sort({ createdAt: -1 })
         .limit(40)
-        .populate('whitePlayerId', 'username rating blitzRating rapidRating classicalRating isOnline avatar')
-        .populate('blackPlayerId', 'username rating blitzRating rapidRating classicalRating isOnline avatar')
         .select(
-          'gameId status initialTime increment whitePlayerId blackPlayerId whiteUsername blackUsername whiteRating blackRating movesCount isPrivate inviteCode ratingCategory startedAt createdAt'
+          'gameId status initialTime increment whitePlayer blackPlayer whiteUsername blackUsername whiteRating blackRating moves isPrivate inviteCode ratingCategory startedAt createdAt'
         )
         .lean(),
       User.find({ isOnline: true })
-        .select('username rating blitzRating rapidRating classicalRating isOnline avatar')
+        .select('username rating blitzRating rapidRating classicalRating isOnline avatar gamesPlayed')
         .sort({ rating: -1 })
         .limit(30)
         .lean(),
     ]);
     return {
       games: (games || []).map((g) => ({
-        ...g,
-        _id: undefined,
-        whitePlayerId: undefined,
-        blackPlayerId: undefined,
+        gameId: g.gameId,
+        status: g.status,
+        initialTime: g.initialTime,
+        increment: g.increment,
+        whiteUsername: g.whiteUsername || null,
+        blackUsername: g.blackUsername || null,
+        whiteRating: g.whiteRating ?? null,
+        blackRating: g.blackRating ?? null,
+        movesCount: Array.isArray(g.moves) ? g.moves.length : 0,
+        isPrivate: !!g.isPrivate,
+        inviteCode: g.inviteCode || null,
+        ratingCategory: g.ratingCategory || null,
+        startedAt: g.startedAt || null,
+        createdAt: g.createdAt || null,
       })),
-      online: online || [],
+      online: (online || []).map((u) => ({
+        _id: u._id?.toString?.() || u._id,
+        username: u.username,
+        rating: u.rating || 1200,
+        blitzRating: u.blitzRating,
+        rapidRating: u.rapidRating,
+        classicalRating: u.classicalRating,
+        isOnline: !!u.isOnline,
+        avatar: u.avatar || null,
+        gamesPlayed: u.gamesPlayed || 0,
+      })),
     };
   } catch (e) {
     console.warn('[Lobby] Using fallback:', e.message);

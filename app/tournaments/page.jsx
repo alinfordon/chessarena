@@ -7,7 +7,7 @@ import TournamentPlayer from '@/models/TournamentPlayer';
 import Button from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
-import TournamentsListClient from '@/components/tournaments/TournamentsListClient';
+import TournamentsListClient, { CreateButton } from '@/components/tournaments/TournamentsListClient';
 
 const TYPE_META = {
   arena: { icon: Shuffle, label: 'Arena' },
@@ -96,7 +96,7 @@ export default async function TournamentsPage() {
           <Button variant="secondary" size="md">
             <Calendar size={16} /> Program
           </Button>
-          <TournamentsListClient.CreateButton />
+          <CreateButton />
         </div>
       </div>
       </TournamentsListClient>

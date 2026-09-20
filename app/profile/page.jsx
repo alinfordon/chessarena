@@ -8,7 +8,6 @@ import {
   Target,
   Zap,
   Award,
-  Share2,
 } from 'lucide-react';
 import {
   Card,
@@ -21,6 +20,7 @@ import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
+import ShareButton from './ShareButton';
 import { getCurrentUser } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Game from '@/models/Game';
@@ -185,9 +185,7 @@ export default async function ProfilePage() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="secondary" size="sm" onClick={() => navigator.clipboard?.writeText(`${location.origin}/u/${displayUser.username}`)}>
-                <Share2 size={14} /> Share
-              </Button>
+              <ShareButton username={displayUser.username} />
             </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-8">

@@ -8,11 +8,18 @@ export function createChessInstance(fen = null) {
   }
 }
 
+export function normalizePromotion(promotion) {
+  if (promotion == null || promotion === '') return null;
+  const p = String(promotion).toLowerCase().replace(/[^qrbn]/g, '').slice(0, 1);
+  return ['q', 'r', 'b', 'n'].includes(p) ? p : null;
+}
+
 export function validateMove(fen, from, to, promotion = null) {
   const chess = createChessInstance(fen);
   try {
     const opts = { from, to };
-    if (promotion) opts.promotion = promotion;
+    const promo = normalizePromotion(promotion);
+    if (promo) opts.promotion = promo;
     const move = chess.move(opts);
     if (!move) return { valid: false };
     return {

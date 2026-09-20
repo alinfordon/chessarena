@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import { getCurrentUser } from '@/lib/auth';
 import Game from '@/models/Game';
-import User from '@/models/User';
 
 export async function POST(req, ctx) {
   try {
@@ -16,6 +15,12 @@ export async function POST(req, ctx) {
     const body = await req.json().catch(() => ({}));
     const color = ['white', 'black'].includes(body?.color) ? body.color : null;
     const inviteCode = body?.inviteCode ? String(body.inviteCode).trim().toUpperCase() : null;
+    const idOf = (value) => {
+      if (value == null || value === '') return null;
+      if (typeof value === 'object' && value._id) return String(value._id);
+      const s = String(value);
+      return s === '[object Object]' ? null : s;
+    };
 
     const game = await Game.findOne({ gameId: id }).select(
       'gameId whitePlayer blackPlayer whiteUsername blackUsername whiteRating blackRating ratingCategory isPrivate inviteCode status startedAt initialTime increment'
@@ -25,20 +30,21 @@ export async function POST(req, ctx) {
     }
     if (game.isPrivate && game.inviteCode) {
       const isOwner =
-        String(user._id) === String(game.whitePlayer) ||
-        String(user._id) === String(game.blackPlayer);
+        idOf(user._id) === idOf(game.whitePlayer) ||
+        idOf(user._id) === idOf(game.blackPlayer);
       if (!isOwner && String(inviteCode) !== String(game.inviteCode)) {
         return NextResponse.json({ ok: false, error: 'Invalid invite code' }, { status: 403 });
       }
     }
-    if (String(game.whitePlayer) !== String(user._id) && String(game.blackPlayer) !== String(user._id)) {
+    const uid = idOf(user._id);
+    if (idOf(game.whitePlayer) !== uid && idOf(game.blackPlayer) !== uid) {
       if (game.status !== 'waiting') {
         return NextResponse.json({ ok: true, spectator: true });
       }
       const ratingField = game.ratingCategory || 'rapidRating';
       const uRating = user[ratingField] || user.rating || 1200;
       const setFields = {};
-      const slotEmpty = (slot) => slot == null;
+      const slotEmpty = (slot) => !idOf(slot);
 
       if (color === 'white' && slotEmpty(game.whitePlayer)) {
         setFields.whitePlayer = user._id;
@@ -67,11 +73,17 @@ export async function POST(req, ctx) {
       if (setFields.whitePlayer || setFields.blackPlayer) {
         Object.assign(game, setFields);
       }
-      if (game.whitePlayer && game.blackPlayer && game.status === 'waiting') {
+      if (idOf(game.whitePlayer) && idOf(game.blackPlayer) && game.status === 'waiting') {
         game.status = 'playing';
         game.startedAt = new Date();
       }
       await game.save();
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL;
+      if (socketUrl) {
+        fetch(`${socketUrl}/notify?type=game-sync&gameId=${game.gameId}`, {
+          method: 'POST',
+        }).catch(() => {});
+      }
     }
     return NextResponse.json({
       ok: true,
@@ -79,8 +91,8 @@ export async function POST(req, ctx) {
       status: game.status,
       startedAt: game.startedAt || null,
       spectator:
-        String(game.whitePlayer) !== String(user._id) &&
-        String(game.blackPlayer) !== String(user._id),
+        idOf(game.whitePlayer) !== uid &&
+        idOf(game.blackPlayer) !== uid,
     });
   } catch (e) {
     console.error('[API /api/games/:id/join] error:', e.message);

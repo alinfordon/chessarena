@@ -25,7 +25,7 @@ const TYPE_OPTIONS = [
   { id: 'single_elimination', name: 'KO', icon: Binary, desc: 'Knockout. O înfrângere = eliminat.' },
 ];
 
-function CreateButton() {
+export function CreateButton() {
   const ctx = useContext(TournamentsListCtx);
   if (!ctx) return null;
   return (
@@ -301,4 +301,3 @@ export default function TournamentsListClient({ children }) {
   );
 }
 
-TournamentsListClient.CreateButton = CreateButton;

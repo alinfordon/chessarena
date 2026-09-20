@@ -100,7 +100,8 @@ export default function ChessBoard({
 
   const handlePromotion = (pieceType) => {
     if (!promotion) return;
-    onMove?.(promotion.from, promotion.to, pieceType);
+    const promo = String(pieceType || 'q').toLowerCase().slice(0, 1);
+    onMove?.(promotion.from, promotion.to, ['q', 'r', 'b', 'n'].includes(promo) ? promo : 'q');
     setPromotion(null);
     setSelectedSquare(null);
   };
@@ -150,7 +151,7 @@ export default function ChessBoard({
           )}
           {piece && (
             <span className={clsx(
-              'text-[9vw] sm:text-[6vw] md:text-[5vw] lg:text-[3.5vw] xl:text-[3vw] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]',
+              'text-[clamp(1.35rem,10cqi,3.4rem)] leading-none drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]',
               piece[0] === 'w' ? 'text-white' : 'text-slate-900',
               isCheckSq(square) && 'animate-pulse'
             )}>
@@ -170,7 +171,7 @@ export default function ChessBoard({
 
   return (
     <div className={clsx('w-full max-w-[min(92vw,92vh,720px)] mx-auto', className)}>
-      <div className="grid grid-cols-8 gap-0 rounded-xl overflow-hidden shadow-premium border-2 border-slate-300/60 dark:border-slate-700/60">
+      <div className="grid grid-cols-8 gap-0 rounded-lg overflow-hidden shadow-premium border border-slate-300/60 dark:border-slate-700/60 [container-type:inline-size]">
         {squares}
       </div>
       <Modal
@@ -181,13 +182,14 @@ export default function ChessBoard({
         size="sm"
       >
         <div className="grid grid-cols-4 gap-3">
-          {['Q', 'R', 'B', 'N'].map((p) => {
-            const key = (orientation === 'white' ? 'w' : 'b') + p;
+          {['q', 'r', 'b', 'n'].map((p) => {
+            const key = (orientation === 'white' ? 'w' : 'b') + p.toUpperCase();
             return (
               <Button
                 key={p}
                 variant="secondary"
                 size="lg"
+                type="button"
                 onClick={() => handlePromotion(p)}
                 className="!p-2 aspect-square text-4xl sm:text-5xl"
               >

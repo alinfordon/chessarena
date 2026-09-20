@@ -12,39 +12,53 @@ import Avatar from '@/components/ui/Avatar';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import Button from '@/components/ui/Button';
 
-const PLAYERS_FALLBACK = [
-  { username: 'GrandMaster99', rating: 2450, blitzRating: 2520, rapidRating: 2430, classicalRating: 2400, gamesPlayed: 1250, gamesWon: 890, gamesDraw: 180, gamesLost: 180, isOnline: true },
-  { username: 'ChessKing', rating: 2380, blitzRating: 2410, rapidRating: 2390, classicalRating: 2340, gamesPlayed: 980, gamesWon: 640, gamesDraw: 190, gamesLost: 150, isOnline: true },
-  { username: 'TacticalMind', rating: 2315, blitzRating: 2350, rapidRating: 2320, classicalRating: 2280, gamesPlayed: 1540, gamesWon: 1010, gamesDraw: 250, gamesLost: 280, isOnline: false },
-  { username: 'EndgameMaster', rating: 2290, blitzRating: 2210, rapidRating: 2290, classicalRating: 2360, gamesPlayed: 870, gamesWon: 570, gamesDraw: 160, gamesLost: 140, isOnline: true },
-  { username: 'KnightRider', rating: 2245, blitzRating: 2310, rapidRating: 2250, classicalRating: 2180, gamesPlayed: 1120, gamesWon: 730, gamesDraw: 200, gamesLost: 190, isOnline: true },
-  { username: 'QueenGambit', rating: 2210, blitzRating: 2180, rapidRating: 2220, classicalRating: 2225, gamesPlayed: 760, gamesWon: 480, gamesDraw: 160, gamesLost: 120, isOnline: false },
-  { username: 'BlitzStorm', rating: 2180, blitzRating: 2310, rapidRating: 2150, classicalRating: 2080, gamesPlayed: 2100, gamesWon: 1350, gamesDraw: 340, gamesLost: 410, isOnline: true },
-  { username: 'PawnStorm', rating: 2150, blitzRating: 2180, rapidRating: 2160, classicalRating: 2110, gamesPlayed: 1340, gamesWon: 820, gamesDraw: 250, gamesLost: 270, isOnline: true },
-  { username: 'Maria_T', rating: 1610, blitzRating: 1590, rapidRating: 1615, classicalRating: 1620, gamesPlayed: 320, gamesWon: 180, gamesDraw: 70, gamesLost: 70, isOnline: true },
-  { username: 'MihaiV', rating: 1520, blitzRating: 1550, rapidRating: 1510, classicalRating: 1500, gamesPlayed: 210, gamesWon: 100, gamesDraw: 45, gamesLost: 65, isOnline: true },
-];
+export const dynamic = 'force-dynamic';
+
+function serializePlayer(u) {
+  return {
+    username: u.username,
+    avatar: u.avatar || null,
+    rating: u.rating ?? 1200,
+    blitzRating: u.blitzRating ?? 1200,
+    rapidRating: u.rapidRating ?? 1200,
+    classicalRating: u.classicalRating ?? 1200,
+    gamesPlayed: u.gamesPlayed || 0,
+    gamesWon: u.gamesWon || 0,
+    gamesDraw: u.gamesDraw || 0,
+    gamesLost: u.gamesLost || 0,
+    isOnline: Boolean(u.isOnline),
+  };
+}
 
 async function getPlayers(sortBy = 'rating') {
   try {
     await dbConnect();
-    const sort = {};
-    sort[sortBy] = -1;
     const players = await User.find({})
-      .sort(sort)
-      .limit(20)
+      .sort({ [sortBy]: -1, gamesPlayed: -1, username: 1 })
+      .limit(50)
       .select('username avatar rating blitzRating rapidRating classicalRating gamesPlayed gamesWon gamesDraw gamesLost isOnline')
       .lean();
-    if (players && players.length >= 5) return players;
+    return (players || []).map(serializePlayer);
   } catch (e) {
-    console.warn('[Leaderboard] Using fallback:', e.message);
+    console.error('[Leaderboard]', e?.message || e);
+    return [];
   }
-  return PLAYERS_FALLBACK;
 }
 
 function Table({ players, ratingKey, label }) {
+  if (!players.length) {
+    return (
+      <div className="p-10 text-center">
+        <Crown size={36} className="mx-auto mb-3 text-slate-400" />
+        <p className="font-semibold text-slate-700 dark:text-slate-300">Niciun jucător încă</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Clasamentul se umple după ce se înregistrează conturi.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -152,26 +166,26 @@ export default async function LeaderboardPage() {
         </p>
       </div>
 
-      {/* Podium */}
+      {top3.length > 0 && (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10 max-w-4xl mx-auto">
         {[
           { p: top3[1], place: 2, color: 'from-slate-300 to-slate-400', h: 'h-40', badge: 'silver', icon: '🥈' },
           { p: top3[0], place: 1, color: 'from-amber-300 to-yellow-500', h: 'h-56 -mt-8', badge: 'gold', icon: '🥇' },
           { p: top3[2], place: 3, color: 'from-amber-600 to-amber-700', h: 'h-32', badge: 'bronze', icon: '🥉' },
-        ].map((item, i) => (
-          <div key={i} className="flex flex-col items-center text-center">
+        ].filter((item) => item.p).map((item) => (
+          <div key={item.place} className="flex flex-col items-center text-center">
             <div className="mb-3">
               <Avatar
-                src={item.p?.avatar}
-                alt={item.p?.username}
+                src={item.p.avatar}
+                alt={item.p.username}
                 size="xl"
                 ring={item.place === 1}
-                status={item.p?.isOnline ? 'online' : 'offline'}
+                status={item.p.isOnline ? 'online' : 'offline'}
               />
             </div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-100">{item.p?.username}</h3>
+            <h3 className="font-bold text-slate-900 dark:text-slate-100">{item.p.username}</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-              {item.p?.rating} ELO · {item.p?.gamesPlayed} games
+              {item.p.rating} ELO · {item.p.gamesPlayed} games
             </p>
             <div className={`w-full rounded-t-2xl bg-gradient-to-b ${item.color} ${item.h} flex flex-col justify-end items-center p-4 shadow-xl`}>
               <div className="text-5xl mb-2">{item.icon}</div>
@@ -180,6 +194,7 @@ export default async function LeaderboardPage() {
           </div>
         ))}
       </div>
+      )}
 
       <Tabs defaultValue="overall">
         <div className="flex justify-center mb-6">
@@ -204,12 +219,6 @@ export default async function LeaderboardPage() {
           </CardContent>
         </Card>
       </Tabs>
-
-      <div className="mt-10 flex justify-center">
-        <Button variant="secondary">
-          Load more players
-        </Button>
-      </div>
     </div>
   );
 }

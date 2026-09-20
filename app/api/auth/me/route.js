@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, COOKIE_NAME } from '@/lib/auth';
 import User from '@/models/User';
 
 export async function GET() {
   try {
     const cookieStore = await cookies();
-    const rawToken = cookieStore.get('chess_arena_session')?.value || null;
+    const rawToken = cookieStore.get(COOKIE_NAME)?.value || null;
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ user: null, socketToken: null }, { status: 200 });

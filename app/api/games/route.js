@@ -197,7 +197,8 @@ export async function GET(req) {
       .filter(Boolean);
 
     const cacheKey = `games:list:${statusParam}:${limit}`;
-    const cached = await cacheGet(cacheKey);
+    const includeWaiting = statuses.includes('waiting');
+    const cached = includeWaiting ? null : await cacheGet(cacheKey);
     if (cached) {
       return NextResponse.json(cached, { status: 200 });
     }
@@ -222,6 +223,10 @@ export async function GET(req) {
       initialTime: g.initialTime,
       increment: g.increment,
       movesCount: Array.isArray(g.moves) ? g.moves.length : 0,
+      whiteUsername: g.whiteUsername || g.whitePlayer?.username || null,
+      blackUsername: g.blackUsername || g.blackPlayer?.username || null,
+      whiteRating: g.whiteRating || g.whitePlayer?.rating || 1200,
+      blackRating: g.blackRating || g.blackPlayer?.rating || 1200,
       isPrivate: !!g.isPrivate,
       whitePlayer: g.whitePlayer
         ? {
@@ -246,7 +251,9 @@ export async function GET(req) {
     }));
 
     const response = { ok: true, games };
-    await cacheSet(cacheKey, response, 60);
+    if (!includeWaiting) {
+      await cacheSet(cacheKey, response, 60);
+    }
 
     return NextResponse.json(response, { status: 200 });
   } catch (e) {

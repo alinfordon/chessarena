@@ -9,7 +9,7 @@ export const metadata = {
 export default async function GamePage({ params }) {
   const { gameId } = await params;
   return (
-    <div className="flex-1">
+    <div className="flex-1 flex flex-col min-h-0">
       <GameClient gameId={gameId} />
     </div>
   );

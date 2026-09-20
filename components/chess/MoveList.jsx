@@ -29,7 +29,7 @@ export default function MoveList({ moves = [], currentIndex = null, onMoveClick,
       'rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white/70 dark:bg-slate-900/60 overflow-hidden flex flex-col',
       className
     )}>
-      <div className="px-4 py-2.5 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between">
+      <div className="px-3 py-1.5 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between shrink-0">
         <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
           Lista mutărilor
         </h4>
@@ -39,7 +39,7 @@ export default function MoveList({ moves = [], currentIndex = null, onMoveClick,
       </div>
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto scrollbar-thin max-h-64 sm:max-h-80 lg:max-h-[360px]"
+        className="flex-1 overflow-y-auto scrollbar-thin min-h-0"
       >
         {pairs.length === 0 ? (
           <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500 italic">
