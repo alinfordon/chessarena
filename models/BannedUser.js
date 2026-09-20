@@ -46,7 +46,10 @@ BannedUserSchema.statics.isUserBanned = async function (userId) {
     const active = await this.findOne({
       userId,
       severity: { $ne: 'warning' },
-      $or: [{ expiresAt: { $gt: new Date() } }, { severity: 'permanent', liftedAt: null }],
+      $or: [
+        { liftedAt: null, expiresAt: { $gt: new Date() } },
+        { severity: 'permanent', liftedAt: null },
+      ],
     }).sort({ createdAt: -1 }).lean();
     if (!active) return { banned: false };
     return {

@@ -51,6 +51,7 @@ const Input = forwardRef(function Input(
             error
               ? 'border-red-400 focus:ring-red-500/30 focus:border-red-500'
               : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600',
+            props.disabled && 'opacity-60 cursor-not-allowed bg-slate-50 dark:bg-slate-800/40',
             className
           )}
           {...props}

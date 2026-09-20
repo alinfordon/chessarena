@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb';
 import Tournament from '@/models/Tournament';
 import TournamentPlayer from '@/models/TournamentPlayer';
 import { getCurrentUser } from '@/lib/auth';
+import { isAdminUser } from '@/lib/admin';
 import { validateTimeControl } from '@/utils/validation';
 import mongoose from 'mongoose';
 import { cacheGet, cacheSet, cacheDelPattern } from '@/lib/cache';
@@ -87,14 +88,30 @@ export async function POST(req) {
     if (!['arena', 'swiss', 'round_robin', 'single_elimination'].includes(type)) {
       return NextResponse.json({ ok: false, error: 'Invalid tournament type' }, { status: 400 });
     }
-    const tcErr = validateTimeControl(timeControl);
-    if (tcErr) return NextResponse.json({ ok: false, error: tcErr }, { status: 400 });
+    const tcErr = validateTimeControl(timeControl?.initialTime, timeControl?.increment || 0);
+    if (tcErr.length) return NextResponse.json({ ok: false, error: tcErr[0] }, { status: 400 });
     if (!startAt || isNaN(new Date(startAt).getTime())) {
       return NextResponse.json({ ok: false, error: 'Invalid start date' }, { status: 400 });
     }
     if (maxPlayers < 2 || maxPlayers > 512) {
       return NextResponse.json({ ok: false, error: 'Players must be between 2 and 512' }, { status: 400 });
     }
+
+    const clampPts = (n, fallback) => {
+      const v = Number(n);
+      if (!Number.isFinite(v)) return fallback;
+      return Math.max(0, Math.min(1000, Math.round(v * 100) / 100));
+    };
+    const scoring = {
+      win: clampPts(body.scoring?.win, 2),
+      draw: clampPts(body.scoring?.draw, 1),
+      loss: clampPts(body.scoring?.loss, 0),
+    };
+    const prizes = {
+      first: clampPts(body.prizes?.first, 0),
+      second: clampPts(body.prizes?.second, 0),
+      third: clampPts(body.prizes?.third, 0),
+    };
 
     await dbConnect();
 
@@ -119,6 +136,9 @@ export async function POST(req) {
       createdBy: new mongoose.Types.ObjectId(user._id),
       pairingAlgorithm: 'auto',
       allowByes: !!allowByes,
+      official: isAdminUser(user) && body.official === true,
+      scoring,
+      prizes,
     });
     await t.save();
     try {

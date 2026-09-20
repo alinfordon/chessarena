@@ -151,6 +151,7 @@ export default async function TournamentsPage() {
                     <Badge variant="primary" size="sm" className="gap-1">
                       <TypeIcon size={10} /> {meta.label}
                     </Badge>
+                    {t.official && <Badge variant="gold" size="sm">Official</Badge>}
                   </div>
                   <Badge variant="warning" size="sm">{tcLabel(t.timeControl)}</Badge>
                 </div>
@@ -177,7 +178,9 @@ export default async function TournamentsPage() {
                   <div>
                     <div className="text-xs text-slate-500 dark:text-slate-400">Prizes</div>
                     <div className="font-bold text-brand-600 dark:text-brand-400">
-                      {t.prizePool || '—'}
+                      {(Number(t.prizes?.first) || Number(t.prizes?.second) || Number(t.prizes?.third))
+                        ? `${t.prizes?.first || 0} / ${t.prizes?.second || 0} / ${t.prizes?.third || 0} pts`
+                        : (t.prizePool || '—')}
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
                       {startLabel(t)}

@@ -731,9 +731,15 @@ async function updateTournamentPlayersOnGameFinish(gameDoc) {
 
     let wScore = 0, bScore = 0;
     let wWin = 0, bWin = 0, wLoss = 0, bLoss = 0, wDraw = 0, bDraw = 0;
-    if (gameDoc.result === 'white') { wScore = 2; wWin = 1; bLoss = 1; }
-    else if (gameDoc.result === 'black') { bScore = 2; bWin = 1; wLoss = 1; }
-    else if (gameDoc.result === 'draw') { wScore = 1; bScore = 1; wDraw = 1; bDraw = 1; }
+    const winPts = Number(t.scoring?.win);
+    const drawPts = Number(t.scoring?.draw);
+    const lossPts = Number(t.scoring?.loss);
+    const ptsWin = Number.isFinite(winPts) ? winPts : 2;
+    const ptsDraw = Number.isFinite(drawPts) ? drawPts : 1;
+    const ptsLoss = Number.isFinite(lossPts) ? lossPts : 0;
+    if (gameDoc.result === 'white') { wScore = ptsWin; bScore = ptsLoss; wWin = 1; bLoss = 1; }
+    else if (gameDoc.result === 'black') { bScore = ptsWin; wScore = ptsLoss; bWin = 1; wLoss = 1; }
+    else if (gameDoc.result === 'draw') { wScore = ptsDraw; bScore = ptsDraw; wDraw = 1; bDraw = 1; }
 
     const ops = [];
     if (wScore !== 0 || wWin || wLoss || wDraw) {

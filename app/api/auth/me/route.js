@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getCurrentUser, COOKIE_NAME } from '@/lib/auth';
+import { isAdminUser } from '@/lib/admin';
 import User from '@/models/User';
 
 export async function GET() {
@@ -11,8 +12,10 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ user: null, socketToken: null }, { status: 200 });
     }
+    const sanitized = User.sanitize(user);
+    sanitized.role = isAdminUser(user) ? 'admin' : 'user';
     return NextResponse.json(
-      { user: User.sanitize(user), socketToken: rawToken },
+      { user: sanitized, socketToken: rawToken },
       { status: 200 }
     );
   } catch (error) {

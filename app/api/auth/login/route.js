@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import { setAuthCookie } from '@/lib/auth';
+import BannedUser from '@/models/BannedUser';
+import { setAuthCookie, isFounderEmail } from '@/lib/auth';
 import { sanitizeText } from '@/utils/validation';
 
 const MAX_ATTEMPTS = 10;
@@ -75,15 +76,29 @@ export async function POST(request) {
       );
     }
 
+    const ban = await BannedUser.isUserBanned(user._id);
+    if (ban?.banned) {
+      return NextResponse.json(
+        { errors: [ban.reason || 'This account is suspended.'] },
+        { status: 403 }
+      );
+    }
+
     user.isOnline = true;
     user.lastSeen = new Date();
+    if (isFounderEmail(user.email)) {
+      user.role = 'admin';
+    }
     await user.save();
 
     console.log(`[Auth] User logged in: ${user.username} (${user._id})`);
 
+    const payload = User.sanitize(user);
+    if (isFounderEmail(user.email)) payload.role = 'admin';
+
     const response = NextResponse.json(
       {
-        user: User.sanitize(user),
+        user: payload,
         message: 'Login successful',
       },
       { status: 200 }

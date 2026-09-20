@@ -62,6 +62,17 @@ const TournamentSchema = new mongoose.Schema(
       default: 'auto',
     },
     allowByes: { type: Boolean, default: false },
+    official: { type: Boolean, default: false, index: true },
+    scoring: {
+      win: { type: Number, default: 2, min: 0, max: 1000 },
+      draw: { type: Number, default: 1, min: 0, max: 1000 },
+      loss: { type: Number, default: 0, min: 0, max: 1000 },
+    },
+    prizes: {
+      first: { type: Number, default: 0, min: 0, max: 1000 },
+      second: { type: Number, default: 0, min: 0, max: 1000 },
+      third: { type: Number, default: 0, min: 0, max: 1000 },
+    },
   },
   { timestamps: true }
 );

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Sun, Moon, Crown, Users, Trophy, Swords, User, LogIn, LogOut, Menu, X, Home } from 'lucide-react';
+import { Sun, Moon, Crown, Users, Trophy, Swords, User, LogIn, LogOut, Menu, X, Home, Shield } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useAuth } from '@/hooks/useAuth';
 import Button from './Button';
@@ -19,7 +19,7 @@ import { useState } from 'react';
 
 export default function Navbar() {
   const { theme, toggleTheme, mounted } = useTheme();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -29,6 +29,7 @@ export default function Navbar() {
     { href: '/play', label: 'Play', icon: Swords },
     { href: '/tournaments', label: 'Tournaments', icon: Trophy },
     { href: '/leaderboard', label: 'Leaderboard', icon: Crown },
+    ...(isAdmin ? [{ href: '/admin', label: 'Admin', icon: Shield }] : []),
   ];
 
   const isActive = (href) =>

@@ -5,7 +5,7 @@ import Game from '@/models/Game';
 import TournamentPlayer from '@/models/TournamentPlayer';
 import Message from '@/models/Message';
 import BannedUser from '@/models/BannedUser';
-import { getCurrentUser, validateUsername, validateEmail } from '@/lib/auth';
+import { getCurrentUser, validateUsername } from '@/lib/auth';
 import { sanitizeText } from '@/utils/validation';
 import {
   buildInitialsAvatar,
@@ -43,7 +43,6 @@ export async function PATCH(request) {
 
     const errors = [];
     let nextUsername = user.username;
-    let nextEmail = user.email;
     let nextAvatar = user.avatar;
 
     if (body.username !== undefined) {
@@ -53,12 +52,6 @@ export async function PATCH(request) {
         errors.push('This username is reserved');
       }
       nextUsername = username;
-    }
-
-    if (body.email !== undefined) {
-      const email = sanitizeText(String(body.email), 120).toLowerCase();
-      errors.push(...validateEmail(email));
-      nextEmail = email;
     }
 
     if (errors.length) {
@@ -72,16 +65,6 @@ export async function PATCH(request) {
       }).select('_id');
       if (taken) {
         return NextResponse.json({ ok: false, errors: ['Username is already taken'] }, { status: 400 });
-      }
-    }
-
-    if (nextEmail !== user.email) {
-      const taken = await User.findOne({
-        email: nextEmail,
-        _id: { $ne: user._id },
-      }).select('_id');
-      if (taken) {
-        return NextResponse.json({ ok: false, errors: ['Email is already registered'] }, { status: 400 });
       }
     }
 
@@ -101,7 +84,6 @@ export async function PATCH(request) {
     const avatarChanged = nextAvatar !== user.avatar;
 
     user.username = nextUsername;
-    user.email = nextEmail;
     user.avatar = nextAvatar;
     await user.save();
 

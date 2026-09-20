@@ -8,7 +8,7 @@ export default function Footer() {
   const pathname = usePathname();
   const currentYear = new Date().getFullYear();
 
-  if (pathname?.startsWith('/game/')) return null;
+  if (pathname?.startsWith('/game/') || pathname?.startsWith('/admin')) return null;
 
   const links = {
     Product: [

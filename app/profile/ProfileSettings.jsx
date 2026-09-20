@@ -27,7 +27,6 @@ export default function ProfileSettings({ username, email, avatar }) {
   const initialColor = useMemo(() => extractAvatarColor(avatar), [avatar]);
   const [form, setForm] = useState({
     username: username || '',
-    email: email || '',
     avatar: avatar || '',
     color: initialColor,
   });
@@ -94,12 +93,9 @@ export default function ProfileSettings({ username, email, avatar }) {
     e.preventDefault();
     const nextErrors = {};
     const u = form.username.trim();
-    const em = form.email.trim().toLowerCase();
     if (u.length < 3) nextErrors.username = 'Username must be at least 3 characters';
     else if (u.length > 20) nextErrors.username = 'Username must be at most 20 characters';
     else if (!/^[a-zA-Z0-9_]+$/.test(u)) nextErrors.username = 'Only letters, numbers and underscores';
-    if (!em) nextErrors.email = 'Email is required';
-    else if (!/^\S+@\S+\.\S+$/.test(em)) nextErrors.email = 'Enter a valid email address';
     setFieldErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
@@ -111,7 +107,6 @@ export default function ProfileSettings({ username, email, avatar }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: u,
-          email: em,
           avatar: form.avatar,
         }),
       });
@@ -174,7 +169,7 @@ export default function ProfileSettings({ username, email, avatar }) {
             <CardTitle className="flex items-center gap-2">
               <User size={18} className="text-brand-500" /> Edit profile
             </CardTitle>
-            <CardDescription>Username, email, and avatar. Ratings cannot be edited.</CardDescription>
+            <CardDescription>Username and avatar. Email is used for sign-in and cannot be changed.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {profileErrors.length > 0 && (
@@ -243,10 +238,11 @@ export default function ProfileSettings({ username, email, avatar }) {
               label="Email"
               icon={Mail}
               type="email"
-              value={form.email}
-              onChange={setField('email')}
-              error={fieldErrors.email}
+              value={email || ''}
+              disabled
+              readOnly
               autoComplete="email"
+              hint="Used for sign-in. Contact an admin if you need to change it."
             />
           </CardContent>
           <CardFooter>

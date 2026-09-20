@@ -35,6 +35,14 @@ function tcLabel(tc) {
   return inc ? `${base}+${inc}` : base;
 }
 
+function prizeLabel(t) {
+  const a = Number(t?.prizes?.first) || 0;
+  const b = Number(t?.prizes?.second) || 0;
+  const c = Number(t?.prizes?.third) || 0;
+  if (a || b || c) return `${a} / ${b} / ${c} pts`;
+  return t?.prizePool || '—';
+}
+
 function formatDate(d) {
   if (!d) return '—';
   try {
@@ -173,6 +181,7 @@ export default async function TournamentDetailPage({ params }) {
                       <Badge variant={st.variant} size="md" dot={st.dot}>{st.text}</Badge>
                       <Badge variant="primary" size="md">{typeMeta.label}</Badge>
                       <Badge variant="warning" size="md">{tcLabel(t.timeControl)}</Badge>
+                      {t.official && <Badge variant="gold" size="md">Official</Badge>}
                       {socketBadge}
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
@@ -208,7 +217,7 @@ export default async function TournamentDetailPage({ params }) {
                     { icon: Users, label: 'Players', value: `${curPlayersCount} / ${t.maxPlayers || 16}` },
                     { icon: Clock, label: 'Time Control', value: tcLabel(t.timeControl) },
                     { icon: Calendar, label: 'Starts', value: formatDate(t.startAt) },
-                    { icon: Crown, label: 'Prizes', value: t.prizePool || '—' },
+                    { icon: Crown, label: 'Prizes', value: prizeLabel(t) },
                   ].map((s, i) => (
                     <div key={i} className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50">
                       <s.icon size={18} className="text-brand-500 mb-2" />
@@ -436,6 +445,7 @@ function FormatCard({ t }) {
           { label: 'Duration', value: typeof hours === 'number' ? `${hours}h` : hours },
           { label: 'Min. Rating', value: t.minRating ?? 0 },
           { label: 'Max. Rating', value: t.maxRating ?? 3000 },
+          { label: 'Scoring', value: `${t.scoring?.win ?? 2} / ${t.scoring?.draw ?? 1} / ${t.scoring?.loss ?? 0}` },
         ].map((r, i) => (
           <div key={i} className="flex justify-between">
             <span className="text-slate-500 dark:text-slate-400">{r.label}</span>
@@ -448,6 +458,12 @@ function FormatCard({ t }) {
 }
 
 function PrizesCard({ t }) {
+  const rows = [
+    { rank: 1, pts: Number(t.prizes?.first) || 0, fallback: 'Glory + Trophy Badge', color: 'gold' },
+    { rank: 2, pts: Number(t.prizes?.second) || 0, fallback: 'Silver Badge', color: 'silver' },
+    { rank: 3, pts: Number(t.prizes?.third) || 0, fallback: 'Bronze Badge', color: 'bronze' },
+  ];
+  const hasPts = rows.some((p) => p.pts > 0);
   return (
     <Card>
       <CardHeader>
@@ -459,18 +475,16 @@ function PrizesCard({ t }) {
       <CardContent className="space-y-3">
         {t.prizePool ? (
           <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-transparent dark:from-amber-950/30 border border-amber-200/60 dark:border-amber-900/40">
-            <div className="text-xs text-amber-600 dark:text-amber-400">Total premii</div>
+            <div className="text-xs text-amber-600 dark:text-amber-400">Prize note</div>
             <div className="font-bold text-amber-800 dark:text-amber-200 text-lg">{t.prizePool}</div>
           </div>
         ) : null}
-        {[
-          { rank: 1, prize: 'Locul I: Glorie + Trophy Badge', color: 'gold' },
-          { rank: 2, prize: 'Locul II: Silver Badge', color: 'silver' },
-          { rank: 3, prize: 'Locul III: Bronze Badge', color: 'bronze' },
-        ].map((p) => (
+        {rows.map((p) => (
           <div key={p.rank} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50 dark:bg-slate-800/40">
             <Badge variant={p.color} size="lg">#{p.rank}</Badge>
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{p.prize}</span>
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {hasPts ? `${p.pts} points` : p.fallback}
+            </span>
           </div>
         ))}
       </CardContent>

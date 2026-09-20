@@ -25,6 +25,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import ShareButton from './ShareButton';
 import ProfileSettings from './ProfileSettings';
 import { getCurrentUser } from '@/lib/auth';
+import { isAdminUser } from '@/lib/admin';
 import dbConnect from '@/lib/mongodb';
 import Game from '@/models/Game';
 import mongoose from 'mongoose';
@@ -187,13 +188,14 @@ export default async function ProfilePage({ searchParams }) {
                   {displayUser.username}
                 </h1>
                 <Badge variant="primary" size="md">Rating {displayUser.rating}</Badge>
+                {isAdminUser(displayUser) && <Badge variant="gold" size="md">Admin</Badge>}
                 {displayUser.isOnline && <Badge variant="success" size="md" dot>Online</Badge>}
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 Member since {new Date(displayUser.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="secondary" size="sm" href="/profile?tab=settings">
                 <Pencil size={14} /> Edit profile
               </Button>

@@ -70,6 +70,14 @@ function tcLabel(initialTime, increment) {
   return `${mins}+${Number(increment) || 0}`;
 }
 
+function prizeLabel(t) {
+  const a = Number(t?.prizes?.first) || 0;
+  const b = Number(t?.prizes?.second) || 0;
+  const c = Number(t?.prizes?.third) || 0;
+  if (a || b || c) return `${a} / ${b} / ${c} pts`;
+  return t?.prizePool || '—';
+}
+
 export default async function HomePage() {
   let leaderboard = [];
   let onlinePlayers = [];
@@ -139,7 +147,8 @@ export default async function HomePage() {
       status: t.status,
       tc: t.timeControl?.label || tcLabel(t.timeControl?.initialTime, t.timeControl?.increment),
       players: counts[i] || t.currentPlayers || 0,
-      prize: t.prizePool || '—',
+      prize: prizeLabel(t),
+      official: !!t.official,
     }));
 
     onlineCount = onlineN || 0;
@@ -383,19 +392,22 @@ export default async function HomePage() {
             <Card key={t.id} hover>
               <CardContent className="space-y-4">
                 <div className="flex items-start justify-between">
-                  <Badge
-                    variant={
-                      t.status === 'live'
-                        ? 'danger'
-                        : t.status === 'registration'
-                          ? 'success'
-                          : 'default'
-                    }
-                    size="sm"
-                    dot
-                  >
-                    {t.status === 'live' ? 'LIVE' : 'Registration'}
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge
+                      variant={
+                        t.status === 'live'
+                          ? 'danger'
+                          : t.status === 'registration'
+                            ? 'success'
+                            : 'default'
+                      }
+                      size="sm"
+                      dot
+                    >
+                      {t.status === 'live' ? 'LIVE' : 'Registration'}
+                    </Badge>
+                    {t.official && <Badge variant="gold" size="sm">Official</Badge>}
+                  </div>
                   <Badge variant="warning" size="sm">
                     {String(t.type || '').replaceAll('_', ' ')}
                   </Badge>
