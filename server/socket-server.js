@@ -6,9 +6,6 @@ const { sanitizeText, isValidId } = require('../utils/validation');
 const { calculateEloRating, getRatingCategory } = require('../lib/rating.js');
 const { formatTime } = require('../utils/time');
 
-const PORT = process.env.SOCKET_PORT || 3001;
-const NEXT_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
 (function loadDotEnvFiles() {
   const fs = require('fs');
   const path = require('path');
@@ -29,6 +26,9 @@ const NEXT_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     } catch {}
   }
 })();
+
+const PORT = process.env.SOCKET_PORT || process.env.PORT || 3021;
+const NEXT_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3022';
 
 const AUTH_SECRET_KEY = new TextEncoder().encode(
   process.env.AUTH_SECRET || 'chess-arena-dev-secret-change-in-production'
