@@ -94,7 +94,7 @@ export default function NotificationBell() {
       const n = {
         id: payload.id || `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         type: payload.type || 'info',
-        title: payload.title || 'Notificare',
+        title: payload.title || 'Notification',
         message: payload.message || '',
         actionHref: payload.actionHref || null,
         actionLabel: payload.actionLabel || null,
@@ -112,38 +112,38 @@ export default function NotificationBell() {
     const onGameStarted = (data) => {
       push({
         type: 'game_started',
-        title: 'Meciul a început!',
-        message: data?.opponent ? `Îți joci împotriva ${data.opponent}.` : 'Un meci nou a început.',
+        title: 'Game started!',
+        message: data?.opponent ? `You're playing ${data.opponent}.` : 'A new match has started.',
         actionHref: data?.gameId ? `/game/${data.gameId}` : null,
-        actionLabel: 'Deschide joc',
+        actionLabel: 'Open game',
       });
     };
 
     const onGameInvite = (data) => {
       push({
         type: 'game_invite',
-        title: 'Invitație joc',
-        message: data?.from ? `${data.from} te invită la un joc de șah.` : 'Ai o invitație nouă.',
+        title: 'Game invite',
+        message: data?.from ? `${data.from} invited you to a chess game.` : 'You have a new invite.',
         actionHref: data?.gameId ? `/game/${data.gameId}` : null,
-        actionLabel: 'Acceptă',
+        actionLabel: 'Accept',
       });
     };
 
     const onTournamentStarted = (data) => {
       push({
         type: 'tournament_started',
-        title: 'Turneu început',
-        message: data?.name ? `Turneul ${data.name} a început.` : 'Un turneu la care participi a început.',
+        title: 'Tournament started',
+        message: data?.name ? `${data.name} has started.` : 'A tournament you joined has started.',
         actionHref: data?.tournamentId ? `/tournaments/${data.tournamentId}` : null,
-        actionLabel: 'Vezi turneu',
+        actionLabel: 'View tournament',
       });
     };
 
     const onUserBanned = (data) => {
       push({
         type: 'system',
-        title: 'Cont suspendat',
-        message: data?.reason || 'Contul tău a fost suspendat temporar.',
+        title: 'Account suspended',
+        message: data?.reason || 'Your account has been temporarily suspended.',
       });
     };
 
@@ -208,7 +208,7 @@ export default function NotificationBell() {
             'relative inline-flex h-9 w-9 items-center justify-center rounded-xl transition-colors hover:bg-slate-100 dark:hover:bg-slate-800',
             unreadCount > 0 && 'text-brand-600 dark:text-brand-400'
           )}
-          aria-label="Notificări"
+          aria-label="Notifications"
         >
           {unreadCount > 0 ? (
             <>
@@ -221,7 +221,7 @@ export default function NotificationBell() {
             <Bell size={18} />
           )}
           {!connected && (
-            <span className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-950" title="Deconectat" />
+            <span className="absolute bottom-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-950" title="Disconnected" />
           )}
         </button>
       }
@@ -231,19 +231,19 @@ export default function NotificationBell() {
           <div className="flex items-center gap-2">
             <Bell size={16} className="text-brand-600 dark:text-brand-400" />
             <div>
-              <div className="text-sm font-bold text-slate-900 dark:text-slate-100">Notificări</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-slate-100">Notifications</div>
               <div className="text-xs text-slate-500 dark:text-slate-400">
-                {unreadCount} necitite · total {notifications.length}
+                {unreadCount} unread · {notifications.length} total
               </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
             {notifications.length > 0 && (
               <>
-                <Button variant="ghost" size="iconSm" title="Marchează toate ca citite" onClick={markAllRead} disabled={unreadCount === 0}>
+                <Button variant="ghost" size="iconSm" title="Mark all as read" onClick={markAllRead} disabled={unreadCount === 0}>
                   <Check size={15} />
                 </Button>
-                <Button variant="ghost" size="iconSm" title="Șterge toate" onClick={clearAll}>
+                <Button variant="ghost" size="iconSm" title="Clear all" onClick={clearAll}>
                   <Trash2 size={15} />
                 </Button>
               </>
@@ -257,9 +257,9 @@ export default function NotificationBell() {
               <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
                 <Bell size={20} className="text-slate-400" />
               </div>
-              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">Fără notificări</div>
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">No notifications</div>
               <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Vei primi notificări când încep meciurile sau când ești invitat la jocuri.
+                You&apos;ll get notified when matches start or when you&apos;re invited to a game.
               </div>
             </div>
           ) : (
@@ -311,7 +311,7 @@ export default function NotificationBell() {
                             <button
                               onClick={() => removeOne(n.id)}
                               className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                              title="Șterge"
+                              title="Delete"
                             >
                               <X size={13} />
                             </button>

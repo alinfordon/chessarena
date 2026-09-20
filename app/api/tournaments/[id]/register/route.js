@@ -14,30 +14,30 @@ export async function POST(req, ctx) {
     }
     const { id } = await ctx.params;
     if (!id || !isValidId(id)) {
-      return NextResponse.json({ ok: false, error: 'ID turneu invalid' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Invalid tournament ID' }, { status: 400 });
     }
     await dbConnect();
 
     const tournament = await Tournament.findById(id);
     if (!tournament) {
-      return NextResponse.json({ ok: false, error: 'Turneu negăsit' }, { status: 404 });
+      return NextResponse.json({ ok: false, error: 'Tournament not found' }, { status: 404 });
     }
     if (tournament.status !== 'registration') {
-      return NextResponse.json({ ok: false, error: 'Înscrierile sunt închise' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Registration is closed' }, { status: 400 });
     }
     const count = await TournamentPlayer.countDocuments({ tournamentId: tournament._id });
     if (count >= tournament.maxPlayers) {
-      return NextResponse.json({ ok: false, error: 'Turneu plin' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Tournament is full' }, { status: 400 });
     }
     if (user.rating < tournament.minRating || user.rating > tournament.maxRating) {
       return NextResponse.json(
-        { ok: false, error: `Rating ${user.rating} în afara intervalului [${tournament.minRating}-${tournament.maxRating}]` },
+        { ok: false, error: `Rating ${user.rating} is outside [${tournament.minRating}-${tournament.maxRating}]` },
         { status: 400 }
       );
     }
     const existing = await TournamentPlayer.findOne({ tournamentId: tournament._id, userId: user._id });
     if (existing) {
-      return NextResponse.json({ ok: true, message: 'Deja înregistrat', playerId: existing._id.toString() });
+      return NextResponse.json({ ok: true, message: 'Already registered', playerId: existing._id.toString() });
     }
 
     const doc = new TournamentPlayer({
@@ -69,6 +69,6 @@ export async function POST(req, ctx) {
     }, { status: 201 });
   } catch (e) {
     console.error('[API][tournaments/:id/register] Error:', e);
-    return NextResponse.json({ ok: false, error: e.message || 'Eroare înscriere' }, { status: 500 });
+    return NextResponse.json({ ok: false, error: e.message || 'Registration error' }, { status: 500 });
   }
 }

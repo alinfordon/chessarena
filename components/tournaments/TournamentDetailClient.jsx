@@ -122,12 +122,12 @@ export default function TournamentDetailClient({ initialDataStr, children }) {
     try {
       const r = await fetch(`/api/tournaments/${tid}/register`, { method: 'POST' });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.ok) throw new Error(d.error || 'Înscrierea nu a reușit');
+      if (!r.ok || !d.ok) throw new Error(d.error || 'Registration failed');
       setUserRegistered(true);
       setCanRegister(false);
       router.refresh();
     } catch (e) {
-      setError(e?.message || 'Eroare');
+      setError(e?.message || 'Error');
     } finally {
       setLoading(false);
     }
@@ -140,12 +140,12 @@ export default function TournamentDetailClient({ initialDataStr, children }) {
     try {
       const r = await fetch(`/api/tournaments/${tid}/unregister`, { method: 'POST' });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.ok) throw new Error(d.error || 'Dezabonarea nu a reușit');
+      if (!r.ok || !d.ok) throw new Error(d.error || 'Could not unregister');
       setUserRegistered(false);
       setCanRegister(true);
       router.refresh();
     } catch (e) {
-      setError(e?.message || 'Eroare');
+      setError(e?.message || 'Error');
     } finally {
       setLoading(false);
     }
@@ -160,7 +160,7 @@ export default function TournamentDetailClient({ initialDataStr, children }) {
     >
       {globalConnected ? (roomConnected ? <Wifi size={10} /> : <Wifi size={10} />) : <WifiOff size={10} />}
       <span className="hidden sm:inline">
-        {globalConnected ? (roomConnected ? 'Live' : 'Conectare...') : 'Offline'}
+        {globalConnected ? (roomConnected ? 'Live' : 'Connecting...') : 'Offline'}
       </span>
     </Badge>
   );
@@ -181,7 +181,7 @@ export default function TournamentDetailClient({ initialDataStr, children }) {
         loading={loading}
       >
         {!loading && <UserPlus size={18} />}
-        {canRegister ? 'Înscrie-te Acum' : (userRegistered ? 'Deja înscris' : 'Închis')}
+        {canRegister ? 'Register now' : (userRegistered ? 'Already registered' : 'Closed')}
       </Button>
     </>
   );
@@ -203,7 +203,7 @@ export default function TournamentDetailClient({ initialDataStr, children }) {
         loading={loading}
       >
         {!loading && <LogOut size={18} />}
-        Retragere înscriere
+        Withdraw registration
       </Button>
     </>
   );

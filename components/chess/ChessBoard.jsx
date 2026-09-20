@@ -177,8 +177,8 @@ export default function ChessBoard({
       <Modal
         isOpen={!!promotion}
         onClose={() => setPromotion(null)}
-        title="Promovare Pion"
-        description="Alegeți piesa în care promovați pionul:"
+        title="Pawn promotion"
+        description="Choose the piece to promote your pawn to:"
         size="sm"
       >
         <div className="grid grid-cols-4 gap-3">

@@ -23,34 +23,12 @@ import {
 } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Avatar from '@/components/ui/Avatar';
-import { TIME_CONTROLS } from '@/utils/time';
+import { TIME_CONTROLS, formatTime } from '@/utils/time';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-
-const TOP_PLAYERS_FALLBACK = [
-  { username: 'GrandMaster99', rating: 2450, gamesPlayed: 1250, isOnline: true },
-  { username: 'ChessKing', rating: 2380, gamesPlayed: 980, isOnline: true },
-  { username: 'TacticalMind', rating: 2315, gamesPlayed: 1540, isOnline: false },
-  { username: 'EndgameMaster', rating: 2290, gamesPlayed: 870, isOnline: true },
-  { username: 'KnightRider', rating: 2245, gamesPlayed: 1120, isOnline: true },
-  { username: 'QueenGambit', rating: 2210, gamesPlayed: 760, isOnline: false },
-  { username: 'BlitzStorm', rating: 2180, gamesPlayed: 2100, isOnline: true },
-  { username: 'PawnStorm', rating: 2150, gamesPlayed: 1340, isOnline: true },
-];
-
-const LIVE_GAMES_FALLBACK = [
-  { white: 'Alin_99', black: 'MihaiV', time: '04:32', tc: '5+3', moves: 28, ratingW: 1520, ratingB: 1495 },
-  { white: 'IonChess', black: 'AlexMaster', time: '08:12', tc: '10+0', moves: 19, ratingW: 1478, ratingB: 1510 },
-  { white: 'Maria_T', black: 'Elena_K', time: '12:05', tc: '15+10', moves: 34, ratingW: 1610, ratingB: 1580 },
-  { white: 'FastBlitz', black: 'RapidKing', time: '01:45', tc: '1+0', moves: 52, ratingW: 1350, ratingB: 1380 },
-];
-
-const ACTIVE_TOURNAMENTS_FALLBACK = [
-  { name: 'Blitz Arena #42', type: 'arena', tc: '3+0', players: 64, status: 'registration', prize: '2000 pts' },
-  { name: 'Rapid Championship', type: 'swiss', tc: '10+5', players: 32, status: 'live', prize: '5000 pts' },
-  { name: 'Weekend Classic', type: 'round_robin', tc: '30+0', players: 8, status: 'registration', prize: '1500 pts' },
-  { name: 'Knockout Cup', type: 'single_elimination', tc: '5+3', players: 128, status: 'live', prize: '3000 pts' },
-];
+import Game from '@/models/Game';
+import Tournament from '@/models/Tournament';
+import TournamentPlayer from '@/models/TournamentPlayer';
 
 const FEATURES = [
   {
@@ -85,30 +63,88 @@ const FEATURES = [
   },
 ];
 
+export const dynamic = 'force-dynamic';
+
+function tcLabel(initialTime, increment) {
+  const mins = Math.floor((Number(initialTime) || 0) / 60);
+  return `${mins}+${Number(increment) || 0}`;
+}
+
 export default async function HomePage() {
-  let leaderboard = TOP_PLAYERS_FALLBACK;
-  let onlineCount = 247;
+  let leaderboard = [];
+  let onlinePlayers = [];
+  let liveGames = [];
+  let tournaments = [];
+  let onlineCount = 0;
+
   try {
     await dbConnect();
-    const topPlayers = await User.find({})
-      .sort({ rating: -1 })
-      .limit(8)
-      .select('username avatar rating gamesPlayed isOnline blitzRating rapidRating classicalRating')
-      .lean();
-    if (topPlayers && topPlayers.length > 0) {
-      leaderboard = topPlayers.map((u) => ({
-        username: u.username,
-        avatar: u.avatar,
-        rating: u.rating,
-        gamesPlayed: u.gamesPlayed || 0,
-        isOnline: u.isOnline,
-      }));
-    }
-    onlineCount =
-      (await User.countDocuments({ isOnline: true })) || 0;
-    if (onlineCount < 50) onlineCount += 150;
+    const [topPlayers, online, games, tourneys, onlineN] = await Promise.all([
+      User.find({})
+        .sort({ rating: -1, gamesPlayed: -1, username: 1 })
+        .limit(8)
+        .select('username avatar rating gamesPlayed isOnline')
+        .lean(),
+      User.find({ isOnline: true })
+        .sort({ rating: -1, username: 1 })
+        .limit(8)
+        .select('username avatar rating gamesPlayed isOnline')
+        .lean(),
+      Game.find({ status: 'playing' })
+        .sort({ lastMoveAt: -1, createdAt: -1 })
+        .limit(6)
+        .select('gameId whiteUsername blackUsername whiteRating blackRating initialTime increment whiteTime blackTime turn moves')
+        .lean(),
+      Tournament.find({ status: { $in: ['registration', 'live'] } })
+        .sort({ status: 1, startAt: 1 })
+        .limit(4)
+        .lean(),
+      User.countDocuments({ isOnline: true }),
+    ]);
+
+    leaderboard = (topPlayers || []).map((u) => ({
+      username: u.username,
+      avatar: u.avatar || null,
+      rating: u.rating ?? 1200,
+      gamesPlayed: u.gamesPlayed || 0,
+      isOnline: Boolean(u.isOnline),
+    }));
+
+    onlinePlayers = (online || []).map((u) => ({
+      username: u.username,
+      avatar: u.avatar || null,
+      rating: u.rating ?? 1200,
+      gamesPlayed: u.gamesPlayed || 0,
+      isOnline: true,
+    }));
+
+    liveGames = (games || []).map((g) => ({
+      gameId: g.gameId,
+      white: g.whiteUsername || 'White',
+      black: g.blackUsername || 'Black',
+      ratingW: g.whiteRating ?? 1200,
+      ratingB: g.blackRating ?? 1200,
+      tc: tcLabel(g.initialTime, g.increment),
+      time: formatTime(g.turn === 'b' ? (g.blackTime ?? 0) : (g.whiteTime ?? 0)),
+      moves: Array.isArray(g.moves) ? g.moves.length : 0,
+    }));
+
+    const counts = await Promise.all(
+      (tourneys || []).map((t) => TournamentPlayer.countDocuments({ tournamentId: t._id }))
+    );
+    tournaments = (tourneys || []).map((t, i) => ({
+      id: String(t._id),
+      name: t.name,
+      type: t.type,
+      status: t.status,
+      tc: t.timeControl?.label || tcLabel(t.timeControl?.initialTime, t.timeControl?.increment),
+      players: counts[i] || t.currentPlayers || 0,
+      prize: t.prizePool || '—',
+    }));
+
+    onlineCount = onlineN || 0;
   } catch (err) {
-    console.warn('[Home] Using fallback data:', err.message);
+    console.error('[Home]', err?.message || err);
   }
 
   return (
@@ -134,8 +170,8 @@ export default async function HomePage() {
             <span className="gradient-text">Compete.</span> Connect.
           </h1>
           <p className="mt-6 text-base sm:text-lg lg:text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Joacă șah în timp real, participă la turnee și conectează-te cu
-            jucători din întreaga lume.
+            Play chess in real time, join tournaments, and connect with
+            players from around the world.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Button size="lg"  href="/play" className="w-full sm:w-auto min-w-[160px]">
@@ -184,11 +220,19 @@ export default async function HomePage() {
               </div>
             </CardHeader>
             <CardContent>
+              {liveGames.length === 0 ? (
+                <div className="py-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                  No live games right now.
+                  <div className="mt-3">
+                    <Button size="sm" href="/play">Play a game</Button>
+                  </div>
+                </div>
+              ) : (
               <div className="space-y-3">
-                {LIVE_GAMES_FALLBACK.map((g, i) => (
+                {liveGames.map((g) => (
                   <Link
-                    key={i}
-                    href="/lobby"
+                    key={g.gameId}
+                    href={`/game/${g.gameId}`}
                     className="group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-transparent hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-all"
                   >
                     <div className="flex-1 min-w-0">
@@ -235,6 +279,7 @@ export default async function HomePage() {
                   </Link>
                 ))}
               </div>
+              )}
             </CardContent>
           </Card>
 
@@ -251,17 +296,22 @@ export default async function HomePage() {
               </div>
             </CardHeader>
             <CardContent>
+              {onlinePlayers.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                  Nobody is online right now.
+                </p>
+              ) : (
               <div className="space-y-2">
-                {TOP_PLAYERS_FALLBACK.slice(0, 6).map((p, i) => (
+                {onlinePlayers.map((p, i) => (
                   <div
                     key={p.username}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
                     <Avatar
                       src={p.avatar}
                       alt={p.username}
                       size="md"
-                      status={p.isOnline ? 'online' : 'offline'}
+                      status="online"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate flex items-center gap-2">
@@ -291,6 +341,7 @@ export default async function HomePage() {
                   </div>
                 ))}
               </div>
+              )}
               <Button variant="ghost" size="sm"  href="/lobby" className="w-full mt-4">
                 See all players <ArrowRight size={16} />
               </Button>
@@ -319,9 +370,17 @@ export default async function HomePage() {
           </Button>
         </div>
 
+        {tournaments.length === 0 ? (
+          <div className="p-10 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400">
+            No active tournaments right now.
+            <div className="mt-3">
+              <Button size="sm" href="/tournaments">Create a tournament</Button>
+            </div>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {ACTIVE_TOURNAMENTS_FALLBACK.map((t, i) => (
-            <Card key={i} hover>
+          {tournaments.map((t) => (
+            <Card key={t.id} hover>
               <CardContent className="space-y-4">
                 <div className="flex items-start justify-between">
                   <Badge
@@ -338,7 +397,7 @@ export default async function HomePage() {
                     {t.status === 'live' ? 'LIVE' : 'Registration'}
                   </Badge>
                   <Badge variant="warning" size="sm">
-                    {t.type.replace('_', ' ')}
+                    {String(t.type || '').replaceAll('_', ' ')}
                   </Badge>
                 </div>
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-tight">
@@ -360,7 +419,7 @@ export default async function HomePage() {
                     <div className="font-bold text-brand-600 dark:text-brand-400">{t.prize}</div>
                   </div>
                 </div>
-                <Button variant={t.status === 'live' ? 'primary' : 'secondary'} size="sm"  href="/tournaments" className="w-full">
+                <Button variant={t.status === 'live' ? 'primary' : 'secondary'} size="sm"  href={`/tournaments/${t.id}`} className="w-full">
                   {t.status === 'live' ? 'Watch' : 'Register'}
                   <ArrowRight size={16} />
                 </Button>
@@ -368,6 +427,7 @@ export default async function HomePage() {
             </Card>
           ))}
         </div>
+        )}
       </section>
 
       {/* LEADERBOARD */}
@@ -392,6 +452,11 @@ export default async function HomePage() {
 
         <Card>
           <CardContent className="p-0 sm:p-0">
+            {leaderboard.length === 0 ? (
+              <div className="p-10 text-center text-sm text-slate-500 dark:text-slate-400">
+                No players on the leaderboard yet.
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -462,6 +527,7 @@ export default async function HomePage() {
                 </tbody>
               </table>
             </div>
+            )}
           </CardContent>
         </Card>
       </section>

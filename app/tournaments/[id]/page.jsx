@@ -59,9 +59,9 @@ export default async function TournamentDetailPage({ params }) {
 
   try {
     await dbConnect();
-    if (!isValidMongoId(id)) throw new Error('ID turneu invalid');
+    if (!isValidMongoId(id)) throw new Error('Invalid tournament ID');
     t = await Tournament.findById(id).populate('createdBy', 'username avatar').lean();
-    if (!t) throw new Error('Turneul nu există');
+    if (!t) throw new Error('Tournament not found');
 
     const ratedCat = t.timeControl?.initialTime
       ? (t.timeControl.initialTime < 180 ? 'blitzRating' : t.timeControl.initialTime < 600 ? 'rapidRating' : 'classicalRating')
@@ -105,16 +105,16 @@ export default async function TournamentDetailPage({ params }) {
     }
   } catch (e) {
     console.error('[TournamentDetail] DB error:', e?.message || e);
-    error = e?.message || 'Eroare la încărcarea turneului';
+    error = e?.message || 'Could not load tournament';
   }
 
   const stMeta = (t) => {
     if (!t) return { text: '—', variant: 'default', dot: false };
     const s = t.status;
     if (t.status === 'live') return { text: 'LIVE', variant: 'danger', dot: true };
-    if (t.status === 'registration') return { text: 'Înscriere Deschisă', variant: 'success', dot: true };
-    if (t.status === 'finished') return { text: 'Finalizat', variant: 'default', dot: false };
-    if (t.status === 'cancelled') return { text: 'Anulat', variant: 'danger', dot: false };
+    if (t.status === 'registration') return { text: 'Registration Open', variant: 'success', dot: true };
+    if (t.status === 'finished') return { text: 'Finished', variant: 'default', dot: false };
+    if (t.status === 'cancelled') return { text: 'Cancelled', variant: 'danger', dot: false };
     return { text: t.status, variant: 'default', dot: false };
   };
 
@@ -122,17 +122,17 @@ export default async function TournamentDetailPage({ params }) {
     return (
       <div className="flex-1 px-4 sm:px-6 lg:px-8 mx-auto max-w-6xl w-full py-8 lg:py-12 animate-fade-in">
         <Button variant="ghost" size="sm" href="/tournaments" className="mb-6">
-          <ArrowLeft size={16} /> Înapoi la Turnee
+          <ArrowLeft size={16} /> Back to Tournaments
         </Button>
         <Card>
           <CardContent className="p-10 text-center space-y-3">
             <AlertCircle size={40} className="mx-auto text-red-500" />
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-              Eroare la încărcare
+              Could not load
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Turneul nu există'}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{error || 'Tournament not found'}</p>
             <Button href="/tournaments">
-              Înapoi la lista de turnee
+              Back to tournament list
             </Button>
           </CardContent>
         </Card>
@@ -158,7 +158,7 @@ export default async function TournamentDetailPage({ params }) {
   return (
     <div className="flex-1 px-4 sm:px-6 lg:px-8 mx-auto max-w-6xl w-full py-8 lg:py-12 animate-fade-in">
       <Button variant="ghost" size="sm" href="/tournaments" className="mb-6">
-        <ArrowLeft size={16} /> Înapoi la Turnee
+        <ArrowLeft size={16} /> Back to Tournaments
       </Button>
 
       <TournamentDetailClient initialDataStr={initialData}>
@@ -188,27 +188,27 @@ export default async function TournamentDetailPage({ params }) {
                       : status === 'live'
                         ? (
                           <Button size="lg" className="w-full md:min-w-[200px]" variant="primary" disabled>
-                            <Trophy size={18} /> În desfășurare
+                            <Trophy size={18} /> In progress
                           </Button>
                         )
                         : (
                           <Button size="lg" className="w-full md:min-w-[200px]" variant="secondary" disabled>
-                            <Crown size={18} /> Turneu închis
+                            <Crown size={18} /> Tournament closed
                           </Button>
                         )
                     }
                     <Button variant="secondary" size="md" className="w-full md:min-w-[200px]">
-                      Distribuie Turneu
+                      Share Tournament
                     </Button>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-8 border-t border-slate-200 dark:border-slate-700/60">
                   {[
-                    { icon: Users, label: 'Jucători', value: `${curPlayersCount} / ${t.maxPlayers || 16}` },
-                    { icon: Clock, label: 'Control Timp', value: tcLabel(t.timeControl) },
-                    { icon: Calendar, label: 'Începe', value: formatDate(t.startAt) },
-                    { icon: Crown, label: 'Premii', value: t.prizePool || '—' },
+                    { icon: Users, label: 'Players', value: `${curPlayersCount} / ${t.maxPlayers || 16}` },
+                    { icon: Clock, label: 'Time Control', value: tcLabel(t.timeControl) },
+                    { icon: Calendar, label: 'Starts', value: formatDate(t.startAt) },
+                    { icon: Crown, label: 'Prizes', value: t.prizePool || '—' },
                   ].map((s, i) => (
                     <div key={i} className="p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50">
                       <s.icon size={18} className="text-brand-500 mb-2" />
@@ -225,7 +225,7 @@ export default async function TournamentDetailPage({ params }) {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2.5">
                     <Crown size={18} className="text-amber-500" />
-                    Câștigători
+                    Winners
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -274,16 +274,16 @@ function StandingsCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2.5">
           <Users2 size={18} className="text-brand-500" />
-          Clasament Live
+          Live Standings
         </CardTitle>
-        <CardDescription>{players.length} jucători înscriși — actualizat în timp real</CardDescription>
+        <CardDescription>{players.length} registered players — updated in real time</CardDescription>
       </CardHeader>
       <CardContent className="p-0 sm:p-0">
         {players.length === 0 ? (
           <div className="p-8 text-center">
             <Users size={32} className="mx-auto text-slate-400 mb-2" />
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Niciun jucător înscris încă. Fii primul!
+              No players registered yet. Be the first!
             </p>
           </div>
         ) : (
@@ -292,12 +292,12 @@ function StandingsCard() {
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800/60 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   <th className="text-left px-4 py-3">#</th>
-                  <th className="text-left px-4 py-3">Jucător</th>
+                  <th className="text-left px-4 py-3">Player</th>
                   <th className="text-right px-4 py-3">Rating</th>
                   <th className="text-right px-4 py-3">Scor</th>
                   <th className="text-right px-4 py-3 hidden sm:table-cell">V/D/E</th>
                   <th className="text-right px-4 py-3 hidden md:table-cell">Buch.</th>
-                  <th className="text-right px-4 py-3">Jocuri</th>
+                  <th className="text-right px-4 py-3">Games</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -321,7 +321,7 @@ function StandingsCard() {
                             {p.username || 'Unknown'}
                           </div>
                           {p.status === 'eliminated' && (
-                            <Badge variant="danger" size="sm">Eliminat</Badge>
+                            <Badge variant="danger" size="sm">Eliminated</Badge>
                           )}
                         </div>
                       </div>
@@ -356,16 +356,16 @@ function PairingsCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2.5">
           <Target size={18} className="text-amber-500" />
-          Meciuri
+          Matches
         </CardTitle>
-        <CardDescription>{pairings.length} meciuri înregistrate</CardDescription>
+        <CardDescription>{pairings.length} recorded matches</CardDescription>
       </CardHeader>
       <CardContent className="space-y-2 max-h-[520px] overflow-y-auto pr-1">
         {pairings.length === 0 ? (
           <div className="p-4 text-center">
             <Target size={24} className="mx-auto text-slate-400 mb-2" />
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Niciun meci încă. Începe turneul pentru a vedea împerecherile.
+              No matches yet. Start the tournament to see pairings.
             </p>
           </div>
         ) : (
@@ -382,7 +382,7 @@ function PairingsCard() {
                     g.status === 'playing' ? 'success' : g.status === 'finished' ? 'default' : 'warning'
                   }
                 >
-                  {g.status === 'playing' ? 'LIVE' : g.status === 'finished' ? 'Final' : 'În așteptare'}
+                  {g.status === 'playing' ? 'LIVE' : g.status === 'finished' ? 'Finished' : 'Waiting'}
                 </Badge>
                 {g.result && (
                   <Badge
@@ -391,23 +391,23 @@ function PairingsCard() {
                       g.result === 'white' ? 'success' : g.result === 'black' ? 'success' : 'warning'
                     }
                   >
-                    {g.result === 'white' ? '1-0 Alb' : g.result === 'black' ? '0-1 Negru' : '½-½'}
+                    {g.result === 'white' ? '1-0 White' : g.result === 'black' ? '0-1 Black' : '½-½'}
                   </Badge>
                 )}
               </div>
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-xs sm:text-sm">
                 <div className="truncate font-semibold text-slate-900 dark:text-slate-100">
-                  {g.whiteUsername || 'Alb'} <span className="text-slate-400">({g.whiteRating || 1200})</span>
+                  {g.whiteUsername || 'White'} <span className="text-slate-400">({g.whiteRating || 1200})</span>
                 </div>
                 <span className="text-slate-400 text-[10px]">vs</span>
                 <div className="truncate font-semibold text-slate-900 dark:text-slate-100 text-right">
-                  <span className="text-slate-400">({g.blackRating || 1200})</span> {g.blackUsername || 'Negru'}
+                  <span className="text-slate-400">({g.blackRating || 1200})</span> {g.blackUsername || 'Black'}
                 </div>
               </div>
               <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-500 dark:text-slate-400">
-                <span>{g.movesCount || 0} mutări</span>
+                <span>{g.movesCount || 0} moves</span>
                 <span className="group-hover:text-brand-600 dark:group-hover:text-brand-400 font-semibold">
-                  Vezi meci →
+                  View game →
                 </span>
               </div>
             </Link>
@@ -431,9 +431,9 @@ function FormatCard({ t }) {
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         {[
-          { label: 'Tip', value: (TYPE_META[t.type] || TYPE_META.arena).label },
-          { label: 'Runde', value: rounds || '—' },
-          { label: 'Durată turneu', value: typeof hours === 'number' ? `${hours}h` : hours },
+          { label: 'Type', value: (TYPE_META[t.type] || TYPE_META.arena).label },
+          { label: 'Rounds', value: rounds || '—' },
+          { label: 'Duration', value: typeof hours === 'number' ? `${hours}h` : hours },
           { label: 'Min. Rating', value: t.minRating ?? 0 },
           { label: 'Max. Rating', value: t.maxRating ?? 3000 },
         ].map((r, i) => (
@@ -453,7 +453,7 @@ function PrizesCard({ t }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2.5">
           <Crown size={18} className="text-amber-500" />
-          Premii
+          Prizes
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

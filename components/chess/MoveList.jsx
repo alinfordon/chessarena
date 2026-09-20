@@ -31,10 +31,10 @@ export default function MoveList({ moves = [], currentIndex = null, onMoveClick,
     )}>
       <div className="px-3 py-1.5 border-b border-slate-200/60 dark:border-slate-700/50 flex items-center justify-between shrink-0">
         <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
-          Lista mutărilor
+          Move list
         </h4>
         <span className="text-xs text-slate-500 dark:text-slate-400">
-          {moves.length} mutări
+          {moves.length} moves
         </span>
       </div>
       <div
@@ -43,9 +43,9 @@ export default function MoveList({ moves = [], currentIndex = null, onMoveClick,
       >
         {pairs.length === 0 ? (
           <div className="p-6 text-center text-sm text-slate-400 dark:text-slate-500 italic">
-            Nicio mutare încă.
+            No moves yet.
             <br />
-            Începeți cu 1. e4 sau altă deschidere.
+            Start with 1. e4 or another opening.
           </div>
         ) : (
           <div className="font-mono text-sm select-none">

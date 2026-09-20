@@ -5,7 +5,7 @@ import User from '@/models/User';
 
 export const metadata = {
   title: 'Lobby | Chess Arena',
-  description: 'Găsește sau creează o partidă de șah.',
+  description: 'Find or create a chess game.',
 };
 
 const FALLBACK_GAMES = [];

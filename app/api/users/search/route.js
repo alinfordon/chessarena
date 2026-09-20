@@ -30,7 +30,7 @@ export async function GET(req) {
   } catch (e) {
     console.error('[API][users/search] Error:', e);
     return NextResponse.json(
-      { ok: false, error: 'Eroare server' },
+      { ok: false, error: 'Server error' },
       { status: 500 }
     );
   }

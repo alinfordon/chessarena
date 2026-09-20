@@ -49,13 +49,13 @@ export default function ChessClock({
   return (
     <div className="flex flex-col gap-2 w-full max-w-[min(92vw,92vh,720px)] mx-auto">
       <ClockCell
-        label={orientation === 'white' ? 'Negru' : 'Alb'}
+        label={orientation === 'white' ? 'Black' : 'White'}
         time={oppTime}
         active={oppActive}
         top
       />
       <ClockCell
-        label={orientation === 'white' ? 'Alb' : 'Negru'}
+        label={orientation === 'white' ? 'White' : 'Black'}
         time={meTime}
         active={meActive}
       />

@@ -25,7 +25,7 @@ export function useWebRTC(gameId) {
     try {
       setError(null);
       if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-        throw new Error('Browser-ul nu suportă media devices');
+        throw new Error('This browser does not support media devices');
       }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: video ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } : false,
@@ -135,7 +135,7 @@ export function useWebRTC(gameId) {
   const offerCall = useCallback(
     async (toUserId) => {
       if (!gameId) return;
-      if (!connected) { setError('Nu sunteți conectat la server'); return; }
+      if (!connected) { setError('You are not connected to the server'); return; }
       if (!localStreamRef.current) {
         await getLocalMedia(true, true);
         if (!localStreamRef.current) return;
@@ -155,7 +155,7 @@ export function useWebRTC(gameId) {
         console.log('[WebRTC] Offer sent to:', toUserId);
       } catch (err) {
         console.error('[WebRTC] Offer error:', err);
-        setError(err?.message || 'Eroare la trimiterea ofertei');
+        setError(err?.message || 'Could not send the offer');
       }
     },
     [gameId, connected, emit, getLocalMedia, destroyPeer, createPeer]
@@ -184,7 +184,7 @@ export function useWebRTC(gameId) {
         console.log('[WebRTC] Answer sent to:', fromUserId);
       } catch (err) {
         console.error('[WebRTC] Answer error:', err);
-        setError(err?.message || 'Eroare la răspuns');
+        setError(err?.message || 'Could not send the answer');
       }
     },
     [gameId, connected, emit, getLocalMedia, destroyPeer, createPeer]

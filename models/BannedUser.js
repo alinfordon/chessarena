@@ -13,7 +13,7 @@ const BannedUserSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: 500,
-      default: 'Suspiciune de folosire a unui motor de șah (anti-cheat)',
+      default: 'Suspected use of a chess engine (anti-cheat)',
     },
     severity: {
       type: String,

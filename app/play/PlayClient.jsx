@@ -71,7 +71,7 @@ function PlayInner() {
     const invite = searchParams?.get('invite');
     if (invite) {
       setIsPrivate(true);
-      toast({ title: 'Ați deschis un joc privat', description: 'Alegeți setările și creați jocul.', variant: 'info' });
+      toast({ title: 'Opened a private game', description: 'Choose the settings and create the game.', variant: 'info' });
     }
   }, [searchParams, toast]);
 
@@ -83,9 +83,9 @@ function PlayInner() {
         setQmState('idle');
         clearInterval(qmIntervalRef.current);
         toast({
-          title: 'Oponent găsit!',
-          description: `Joc #${payload.gameId?.slice(0, 6).toUpperCase()}` +
-            (payload.side ? ` · Jucați cu ${payload.side === 'white' ? 'alb' : 'negru'}` : ''),
+          title: 'Opponent found!',
+          description: `Game #${payload.gameId?.slice(0, 6).toUpperCase()}` +
+            (payload.side ? ` · You play ${payload.side === 'white' ? 'white' : 'black'}` : ''),
           variant: 'success',
         });
         router.push(`/game/${payload.gameId}`);
@@ -103,7 +103,7 @@ function PlayInner() {
       increment: timeControl.increment,
       colorPreference: color,
     });
-    toast({ title: 'Căutare oprită', variant: 'info' });
+    toast({ title: 'Search stopped', variant: 'info' });
   };
 
   const handleQuickMatch = () => {
@@ -124,9 +124,9 @@ function PlayInner() {
       (ack) => {
         if (!ack?.ok) {
           stopQM();
-          toast({ title: ack?.error || 'Eroare înscriere coadă', variant: 'warning' });
+          toast({ title: ack?.error || 'Could not join the queue', variant: 'warning' });
         } else {
-          toast({ title: 'Înscriu în coadă...', variant: 'info' });
+          toast({ title: 'Joining the queue...', variant: 'info' });
         }
       }
     );
@@ -134,7 +134,7 @@ function PlayInner() {
 
   const authGuard = () => {
     if (!isAuthenticated) {
-      toast({ title: 'Trebuie să fiți logat', variant: 'warning' });
+      toast({ title: 'You need to be signed in', variant: 'warning' });
       router.push('/login');
       return false;
     }
@@ -166,17 +166,17 @@ function PlayInner() {
       const data = await res.json();
       setCreating(false);
       if (!data.ok) {
-        toast({ title: data.error || 'Creare eșuată', variant: 'warning' });
+        toast({ title: data.error || 'Could not create game', variant: 'warning' });
         return;
       }
       if (body.isPrivate && !withOpponent && !withBot) {
         const g = data;
         const link = `${window.location.origin}/play?invite=${g.inviteCode}`;
         setInviteLink({ link, code: g.inviteCode, gameId: g.gameId });
-        toast({ title: 'Joc privat creat!', variant: 'success' });
+        toast({ title: 'Private game created!', variant: 'success' });
       } else {
         toast({
-          title: withBot ? 'Joc vs AI creat!' : withOpponent ? 'Invitație trimisă!' : 'Joc creat!',
+          title: withBot ? 'Game vs AI created!' : withOpponent ? 'Invite sent!' : 'Game created!',
           description: `${Math.floor(timeControl.initialTime / 60)}+${timeControl.increment} · ${data.status}`,
           variant: 'success',
         });
@@ -184,7 +184,7 @@ function PlayInner() {
       }
     } catch (e) {
       setCreating(false);
-      toast({ title: 'Eroare rețea', variant: 'warning' });
+      toast({ title: 'Network error', variant: 'warning' });
     }
   };
 
@@ -211,15 +211,15 @@ function PlayInner() {
     if (!inviteLink?.link) return;
     navigator.clipboard?.writeText(inviteLink.link).then(() => {
       setCopied(true);
-      toast({ title: 'Link copiat!', variant: 'success' });
+      toast({ title: 'Link copied!', variant: 'success' });
       setTimeout(() => setCopied(false), 1500);
     });
   };
 
   const colorOptions = [
-    { id: 'white', label: 'Alb', icon: CircleDot, cls: 'text-slate-900 bg-white border-slate-300' },
+    { id: 'white', label: 'White', icon: CircleDot, cls: 'text-slate-900 bg-white border-slate-300' },
     { id: 'random', label: 'Random', icon: Shuffle, cls: 'text-brand-600 bg-brand-50 border-brand-200 dark:bg-brand-950/40 dark:border-brand-800/40 dark:text-brand-400' },
-    { id: 'black', label: 'Negru', icon: CircleDot, cls: 'text-white bg-slate-900 border-slate-700' },
+    { id: 'black', label: 'Black', icon: CircleDot, cls: 'text-white bg-slate-900 border-slate-700' },
   ];
 
   const TCGrid = ({ small = false }) => (
@@ -280,16 +280,16 @@ function PlayInner() {
 
   const botLevelInfo = useMemo(() => {
     const infos = [
-      { elo: 800, label: 'Începător', desc: 'Mutări simple, greșeli frecvente' },
-      { elo: 950, label: 'Amator', desc: 'Înțelege regulile, capturează uneori' },
-      { elo: 1100, label: 'Intermediar', desc: 'Evită capcanele simple' },
-      { elo: 1250, label: 'Club', desc: 'Strategie de bază, dezvoltă piese' },
-      { elo: 1400, label: 'Club Avansat', desc: 'Capturează aproape întotdeauna' },
-      { elo: 1550, label: 'Categorie 4', desc: 'Joc solid, cateva greșeli' },
-      { elo: 1700, label: 'Categorie 3', desc: 'Atacuri și apărări clare' },
-      { elo: 1850, label: 'Categorie 2', desc: 'Precizie bună, planificare' },
-      { elo: 2000, label: 'Categorie 1 (Expert)', desc: 'Mutări puternice, rareori greșeli' },
-      { elo: 2200, label: 'Maestru (CM)', desc: 'Strategie avansată, precisie mare' },
+      { elo: 800, label: 'Beginner', desc: 'Simple moves, frequent mistakes' },
+      { elo: 950, label: 'Amateur', desc: 'Knows the rules, captures sometimes' },
+      { elo: 1100, label: 'Intermediate', desc: 'Avoids simple traps' },
+      { elo: 1250, label: 'Club', desc: 'Basic strategy, develops pieces' },
+      { elo: 1400, label: 'Advanced Club', desc: 'Almost always captures hanging pieces' },
+      { elo: 1550, label: 'Category 4', desc: 'Solid play, occasional mistakes' },
+      { elo: 1700, label: 'Category 3', desc: 'Clear attacks and defenses' },
+      { elo: 1850, label: 'Category 2', desc: 'Good accuracy and planning' },
+      { elo: 2000, label: 'Category 1 (Expert)', desc: 'Strong moves, rare mistakes' },
+      { elo: 2200, label: 'Master (CM)', desc: 'Advanced strategy, high precision' },
     ];
     return infos[Math.max(0, Math.min(9, botLevel - 1))];
   }, [botLevel]);
@@ -325,7 +325,7 @@ function PlayInner() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                Nivel {botLevel} · {botLevelInfo.label}
+                Level {botLevel} · {botLevelInfo.label}
               </span>
               <Badge variant="purple" size="sm">
                 ~{botLevelInfo.elo} Elo
@@ -354,7 +354,7 @@ function PlayInner() {
       >
         <Unlock size={20} className={clsx('mb-2', !isPrivate ? 'text-brand-500' : 'text-slate-400')} />
         <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">Public</div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Oricine poate intra din Lobby</div>
+        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Anyone can join from the Lobby</div>
       </button>
       <button
         type="button"
@@ -367,8 +367,8 @@ function PlayInner() {
         )}
       >
         <Lock size={20} className={clsx('mb-2', isPrivate ? 'text-brand-500' : 'text-slate-400')} />
-        <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">Privat</div>
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Doar cu cod de invitație</div>
+        <div className="font-bold text-slate-900 dark:text-slate-100 text-sm">Private</div>
+        <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Invite code only</div>
       </button>
     </div>
   );
@@ -380,10 +380,10 @@ function PlayInner() {
           <Swords size={12} /> Play Chess
         </Badge>
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-          Începe următoarea ta partidă
+          Start your next game
         </h1>
         <p className="mt-2 text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
-          Quick Match cu oponent aleatoriu, joc Custom cu setări detaliate, sau invită un prieten.
+          Quick Match with a random opponent, a Custom game with full settings, or invite a friend.
         </p>
       </div>
 
@@ -409,7 +409,7 @@ function PlayInner() {
           <Card className="max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle>Quick Match</CardTitle>
-              <CardDescription>Găsește un oponent instant după rating</CardDescription>
+              <CardDescription>Find an opponent instantly by rating</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
@@ -419,7 +419,7 @@ function PlayInner() {
                 <TCGrid />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Culoare</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Color</h3>
                 <ColorPicker />
               </div>
               {qmState === 'searching' && (
@@ -430,14 +430,14 @@ function PlayInner() {
                       <span className="relative rounded-full h-3 w-3 bg-brand-500 block" />
                     </div>
                     <div>
-                      <div className="font-semibold text-brand-700 dark:text-brand-400">Caut oponent...</div>
+                      <div className="font-semibold text-brand-700 dark:text-brand-400">Searching for opponent...</div>
                       <div className="text-xs text-brand-600/70 dark:text-brand-400/70">
-                        Așteptare: <strong className="tabular-nums">{qmWait}s</strong> · Rating ±300, după 30s ±1000
+                        Waiting: <strong className="tabular-nums">{qmWait}s</strong> · Rating ±300, after 30s ±1000
                       </div>
                     </div>
                   </div>
                   <Button variant="danger" size="sm" onClick={stopQM}>
-                    <X size={14} /> Anulează
+                    <X size={14} /> Cancel
                   </Button>
                 </div>
               )}
@@ -456,10 +456,10 @@ function PlayInner() {
               ) : (
                 <Button size="lg" loading={creating} onClick={handleQuickMatch} className="w-full" disabled={!connected}>
                   {!connected ? (
-                    <>Conectare...</>
+                    <>Connecting...</>
                   ) : (
                     <>
-                      <Users size={18} /> Găsește Oponent
+                      <Users size={18} /> Find Opponent
                     </>
                   )}
                 </Button>
@@ -474,15 +474,15 @@ function PlayInner() {
               <>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Check size={20} className="text-emerald-500" /> Joc privat creat
+                    <Check size={20} className="text-emerald-500" /> Private game created
                   </CardTitle>
                   <CardDescription>
-                    Distribuie codul de invitație prietenului tău.
+                    Share the invite code with your friend.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="p-4 rounded-xl bg-gradient-to-br from-brand-50 to-purple-50 dark:from-brand-950/30 dark:to-purple-950/20 border border-brand-200/50 dark:border-brand-800/40">
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Cod invitație</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">Invite code</div>
                     <div className="font-mono text-2xl font-black tracking-widest text-brand-700 dark:text-brand-400 mb-3">
                       {inviteLink.code}
                     </div>
@@ -491,16 +491,16 @@ function PlayInner() {
                       <Input value={inviteLink.link} readOnly className="!text-xs !font-mono" />
                       <Button size="md" variant="secondary" onClick={copy} className="flex-shrink-0">
                         {copied ? <Check size={14} /> : <Copy size={14} />}
-                        {copied ? 'Copiat' : 'Copiază'}
+                        {copied ? 'Copied' : 'Copy'}
                       </Button>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <Button variant="ghost" className="flex-1" onClick={() => setInviteLink(null)}>
-                      Creează alt joc
+                      Create another game
                     </Button>
                     <Button className="flex-1" href={`/game/${inviteLink.gameId}`}>
-                      Intră în joc <Swords size={15} />
+                      Enter game <Swords size={15} />
                     </Button>
                   </div>
                 </CardContent>
@@ -509,7 +509,7 @@ function PlayInner() {
               <>
                 <CardHeader>
                   <CardTitle>Custom Game</CardTitle>
-                  <CardDescription>Control complet asupra setărilor jocului</CardDescription>
+                  <CardDescription>Full control over the game settings</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div>
@@ -519,17 +519,17 @@ function PlayInner() {
                     <TCGrid />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Culoare ta</h3>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Your color</h3>
                     <ColorPicker />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Vizibilitate</h3>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Visibility</h3>
                     <VisibilityPicker />
                   </div>
                 </CardContent>
                 <CardFooter>
                   <Button size="lg" loading={creating} onClick={() => handleCreateGame(null)} className="w-full">
-                    <Swords size={18} /> Creează Joc
+                    <Swords size={18} /> Create Game
                   </Button>
                 </CardFooter>
               </>
@@ -542,17 +542,17 @@ function PlayInner() {
             <CardHeader>
               <CardTitle>Invite Friend</CardTitle>
               <CardDescription>
-                Caută un prieten după nume și trimite-i o invitație privată.
+                Search for a friend by name and send a private invite.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div>
                 <label className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2 block">
-                  Caută jucător
+                  Search player
                 </label>
                 <div className="relative">
                   <Input
-                    placeholder="Scrie minim 2 caractere..."
+                    placeholder="Type at least 2 characters..."
                     value={searchQuery}
                     onChange={(e) => runSearch(e.target.value)}
                     icon={<Search size={16} />}
@@ -603,7 +603,7 @@ function PlayInner() {
                 )}
                 {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
                   <div className="mt-2 text-center p-4 text-xs text-slate-500 dark:text-slate-400">
-                    Niciun rezultat.
+                    No results.
                   </div>
                 )}
                 {selectedOpponent && (
@@ -616,10 +616,10 @@ function PlayInner() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-brand-800 dark:text-brand-300 truncate">
-                        Invitat: <strong>{selectedOpponent.username}</strong>
+                        Invited: <strong>{selectedOpponent.username}</strong>
                       </div>
                       <div className="text-xs text-brand-700/70 dark:text-brand-300/70">
-                        Vei juca cu {color === 'random' ? 'culoare random' : color === 'white' ? 'alb' : 'negru'}
+                        You will play with {color === 'random' ? 'a random color' : color === 'white' ? 'white' : 'black'}
                       </div>
                     </div>
                     <Button size="sm" variant="ghost" onClick={() => setSelectedOpponent(null)}>
@@ -635,7 +635,7 @@ function PlayInner() {
                 <TCGrid small />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Culoarea ta</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Your color</h3>
                 <ColorPicker />
               </div>
             </CardContent>
@@ -647,10 +647,10 @@ function PlayInner() {
                 className="w-full"
                 disabled={!selectedOpponent}
               >
-                <UserPlus size={18} /> Trimite Invitație
+                <UserPlus size={18} /> Send Invite
               </Button>
               <p className="text-xs text-center text-slate-500 dark:text-slate-400">
-                Prietenul tău va primi notificare în aplicație, iar jocul va fi privat și gata de început.
+                Your friend will get an in-app notification, and the game will be private and ready to start.
               </p>
             </CardFooter>
           </Card>
@@ -660,16 +660,16 @@ function PlayInner() {
           <Card className="max-w-2xl mx-auto">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Brain size={18} className="text-purple-500" /> Joacă împotriva AI-ului
+                <Brain size={18} className="text-purple-500" /> Play against the AI
               </CardTitle>
               <CardDescription>
-                Alege nivelul de dificultate pentru Stockfish Bot și începe să te joci imediat.
+                Choose the Stockfish difficulty and start playing right away.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
-                  <Trophy size={14} className="text-amber-500" /> Nivel Stockfish
+                  <Trophy size={14} className="text-amber-500" /> Stockfish level
                 </h3>
                 <BotLevelPicker />
               </div>
@@ -680,7 +680,7 @@ function PlayInner() {
                 <TCGrid small />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Culoarea ta</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3">Your color</h3>
                 <ColorPicker />
               </div>
             </CardContent>
@@ -691,7 +691,7 @@ function PlayInner() {
                 onClick={() => handleCreateGame(null, true)}
                 className="w-full gradient-bg hover:brightness-110"
               >
-                <Swords size={18} /> Începe Partidă vs AI
+                <Swords size={18} /> Start game vs AI
               </Button>
             </CardFooter>
           </Card>
@@ -703,7 +703,7 @@ function PlayInner() {
 
 export default function PlayClient() {
   return (
-    <Suspense fallback={<div className="min-h-[60vh]"><LoadingScreen label="Se încarcă..." /></div>}>
+    <Suspense fallback={<div className="min-h-[60vh]"><LoadingScreen label="Loading..." /></div>}>
       <PlayInner />
     </Suspense>
   );

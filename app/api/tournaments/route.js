@@ -56,7 +56,7 @@ export async function GET(req) {
     return NextResponse.json(response);
   } catch (e) {
     console.error('[API][tournaments] GET Error:', e);
-    return NextResponse.json({ ok: false, error: 'Eroare server' }, { status: 500 });
+    return NextResponse.json({ ok: false, error: 'Server error' }, { status: 500 });
   }
 }
 
@@ -82,18 +82,18 @@ export async function POST(req) {
     } = body || {};
 
     if (!name || typeof name !== 'string' || name.trim().length < 3) {
-      return NextResponse.json({ ok: false, error: 'Nume turneu invalid (min 3)' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Invalid tournament name (min 3 characters)' }, { status: 400 });
     }
     if (!['arena', 'swiss', 'round_robin', 'single_elimination'].includes(type)) {
-      return NextResponse.json({ ok: false, error: 'Tip turneu invalid' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Invalid tournament type' }, { status: 400 });
     }
     const tcErr = validateTimeControl(timeControl);
     if (tcErr) return NextResponse.json({ ok: false, error: tcErr }, { status: 400 });
     if (!startAt || isNaN(new Date(startAt).getTime())) {
-      return NextResponse.json({ ok: false, error: 'Dată început invalidă' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Invalid start date' }, { status: 400 });
     }
     if (maxPlayers < 2 || maxPlayers > 512) {
-      return NextResponse.json({ ok: false, error: 'Jucători 2-512' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Players must be between 2 and 512' }, { status: 400 });
     }
 
     await dbConnect();
@@ -132,7 +132,7 @@ export async function POST(req) {
   } catch (e) {
     console.error('[API][tournaments] POST Error:', e);
     return NextResponse.json(
-      { ok: false, error: e.message || 'Eroare creare turneu' },
+      { ok: false, error: e.message || 'Could not create tournament' },
       { status: 500 }
     );
   }

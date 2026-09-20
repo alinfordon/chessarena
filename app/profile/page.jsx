@@ -8,6 +8,8 @@ import {
   Target,
   Zap,
   Award,
+  Pencil,
+  Settings,
 } from 'lucide-react';
 import {
   Card,
@@ -21,6 +23,7 @@ import Avatar from '@/components/ui/Avatar';
 import Button from '@/components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import ShareButton from './ShareButton';
+import ProfileSettings from './ProfileSettings';
 import { getCurrentUser } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import Game from '@/models/Game';
@@ -56,8 +59,9 @@ async function getRecentGames(userId) {
   });
   const games = await Game.find({
     $or: [{ whitePlayer: _id }, { blackPlayer: _id }],
+    status: { $in: ['finished', 'aborted'] },
   })
-    .sort({ createdAt: -1 })
+    .sort({ finishedAt: -1, createdAt: -1 })
     .limit(30)
     .select(
       'gameId whitePlayer blackPlayer whiteUsername blackUsername whiteRating blackRating ratingCategory initialTime increment status result termination moves createdAt finishedAt'
@@ -119,7 +123,12 @@ function timeAgo(d) {
   return new Date(d).toLocaleDateString();
 }
 
-export default async function ProfilePage() {
+const PROFILE_TABS = ['overview', 'ratings', 'achievements', 'history', 'settings'];
+
+export default async function ProfilePage({ searchParams }) {
+  const sp = await searchParams;
+  const tabParam = Array.isArray(sp?.tab) ? sp.tab[0] : sp?.tab;
+  const initialTab = PROFILE_TABS.includes(tabParam) ? tabParam : 'overview';
   let user = null;
   try {
     user = await getCurrentUser();
@@ -131,11 +140,11 @@ export default async function ProfilePage() {
               <div className="h-16 w-16 rounded-2xl gradient-bg mx-auto flex items-center justify-center shadow-xl">
                 <User size={28} className="text-white" />
               </div>
-              <h2 className="text-2xl font-black">Conectează-te</h2>
-              <p className="text-slate-600 dark:text-slate-400">Trebuie să fii autentificat pentru a vedea profilul tău.</p>
+              <h2 className="text-2xl font-black">Sign in</h2>
+              <p className="text-slate-600 dark:text-slate-400">You need to be signed in to view your profile.</p>
               <div className="flex gap-3 justify-center">
                 <Button href="/login">Login</Button>
-                <Button variant="secondary" href="/register">Înregistrare</Button>
+                <Button variant="secondary" href="/register">Sign up</Button>
               </div>
             </CardContent>
           </Card>
@@ -146,7 +155,7 @@ export default async function ProfilePage() {
     console.warn('[Profile] Auth error:', e.message);
     return (
       <div className="flex-1 p-10 text-center text-red-600">
-        Eroare încărcare profil. Încearcă din nou.
+        Could not load profile. Please try again.
       </div>
     );
   }
@@ -185,6 +194,9 @@ export default async function ProfilePage() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button variant="secondary" size="sm" href="/profile?tab=settings">
+                <Pencil size={14} /> Edit profile
+              </Button>
               <ShareButton username={displayUser.username} />
             </div>
           </div>
@@ -205,33 +217,43 @@ export default async function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="overview">
-        <TabsList>
+      <Tabs key={initialTab} defaultValue={initialTab}>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="overview"><Crown size={14} /> Overview</TabsTrigger>
           <TabsTrigger value="ratings"><Award size={14} /> Ratings</TabsTrigger>
           <TabsTrigger value="achievements"><Trophy size={14} /> Achievements ({achievements.filter(a=>a.unlocked).length}/{achievements.length})</TabsTrigger>
           <TabsTrigger value="history"><Swords size={14} /> History ({recent.total})</TabsTrigger>
+          <TabsTrigger value="settings"><Settings size={14} /> Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2.5">
-                  <Swords size={18} className="text-brand-500" /> Recent Games
-                </CardTitle>
-                <CardDescription>{recent.total} matches total · Click to review</CardDescription>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex items-center gap-2.5">
+                      <Swords size={18} className="text-brand-500" /> Recent Games
+                    </CardTitle>
+                    <CardDescription>Last 10 games · Click to review</CardDescription>
+                  </div>
+                  {recent.total > 10 && (
+                    <Button variant="ghost" size="sm" href="/profile?tab=history">
+                      View all
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="p-0 sm:p-0">
                 {recent.games.length === 0 ? (
                   <div className="p-10 text-center text-slate-500 dark:text-slate-400 space-y-2">
                     <Swords size={32} className="mx-auto opacity-40" />
-                    <p>Nu ai jucat nicio partidă încă.</p>
-                    <Button href="/play">Joacă-te acum</Button>
+                    <p>You haven&apos;t played any games yet.</p>
+                    <Button href="/play">Play now</Button>
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    {recent.games.map((g) => {
+                    {recent.games.slice(0, 10).map((g) => {
                       const resultColor =
                         g.result === 'win'
                           ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200/60 dark:border-emerald-900/40 text-emerald-700 dark:text-emerald-300'
@@ -366,12 +388,12 @@ export default async function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Game History</CardTitle>
-              <CardDescription>Ultimele 30 de partide — click pentru a revedea mutările</CardDescription>
+              <CardDescription>Last 30 games — click to review the moves</CardDescription>
             </CardHeader>
             <CardContent className="p-0 sm:p-0">
               {recent.games.length === 0 ? (
                 <div className="p-10 text-center text-slate-500 dark:text-slate-400">
-                  Nu există partide de afișat.
+                  No games to show.
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -409,6 +431,14 @@ export default async function ProfilePage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <ProfileSettings
+            username={displayUser.username}
+            email={displayUser.email || ''}
+            avatar={displayUser.avatar || ''}
+          />
         </TabsContent>
       </Tabs>
     </div>

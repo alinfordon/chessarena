@@ -17,10 +17,10 @@ const TYPE_META = {
 };
 
 const TYPES = [
-  { id: 'arena', name: 'Arena', icon: Shuffle, desc: 'Joacă cât mai multe jocuri posibil într-un timp fix. Mai multe victorii = scor mai mare.' },
-  { id: 'swiss', name: 'Swiss', icon: Target, desc: 'Jucătorii cu scoruri similare se întâlnesc. Cel mai bun pentru turnee mari.' },
-  { id: 'round_robin', name: 'Round Robin', icon: Users, desc: 'Toți se întâlnesc cu toții. Echitabil dar mai lung. Bun pentru grupuri mici.' },
-  { id: 'single_elimination', name: 'Single Elimination', icon: Binary, desc: 'Pierzi o dată și ești afară. Risc ridicat și terminări rapide.' },
+  { id: 'arena', name: 'Arena', icon: Shuffle, desc: 'Play as many games as you can in a fixed time window. More wins mean a higher score.' },
+  { id: 'swiss', name: 'Swiss', icon: Target, desc: 'Players with similar scores are paired. Best for large events.' },
+  { id: 'round_robin', name: 'Round Robin', icon: Users, desc: 'Everyone plays everyone. Fair, but longer. Great for small groups.' },
+  { id: 'single_elimination', name: 'Single Elimination', icon: Binary, desc: 'Lose once and you are out. High stakes and a fast finish.' },
 ];
 
 export const dynamic = 'force-dynamic';
@@ -47,8 +47,8 @@ export default async function TournamentsPage() {
 
   const statusLabel = (s) => {
     if (s === 'live') return { text: 'LIVE', variant: 'danger' };
-    if (s === 'registration') return { text: 'Înscriere', variant: 'success' };
-    if (s === 'finished') return { text: 'Finalizat', variant: 'default' };
+    if (s === 'registration') return { text: 'Registration', variant: 'success' };
+    if (s === 'finished') return { text: 'Finished', variant: 'default' };
     return { text: s, variant: 'default' };
   };
 
@@ -63,18 +63,18 @@ export default async function TournamentsPage() {
   };
 
   const startLabel = (t) => {
-    if (t.status === 'live') return t.currentRound > 0 ? `Runda ${t.currentRound} / ${t.rounds || '?'}` : 'În desfășurare';
-    if (t.status === 'finished') return 'Finalizat';
+    if (t.status === 'live') return t.currentRound > 0 ? `Round ${t.currentRound} / ${t.rounds || '?'}` : 'In progress';
+    if (t.status === 'finished') return 'Finished';
     const ts = t.startAt ? new Date(t.startAt).getTime() : 0;
     const now = Date.now();
     const diff = ts - now;
-    if (diff <= 0) return 'În curând';
+    if (diff <= 0) return 'Starting soon';
     const h = Math.floor(diff / 3_600_000);
     const d = Math.floor(h / 24);
-    if (d > 0) return `În ${d} zile`;
-    if (h > 0) return `În ${h} ore`;
+    if (d > 0) return `In ${d} day${d === 1 ? '' : 's'}`;
+    if (h > 0) return `In ${h} hour${h === 1 ? '' : 's'}`;
     const m = Math.floor(diff / 60000);
-    return `În ${m} minute`;
+    return `In ${m} minute${m === 1 ? '' : 's'}`;
   };
 
   return (
@@ -83,18 +83,18 @@ export default async function TournamentsPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-10">
           <div>
             <Badge variant="purple" size="lg" className="mb-3">
-            <Trophy size={12} /> Turnee
+            <Trophy size={12} /> Tournaments
           </Badge>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
-            Compete pentru Glorie
+            Compete for Glory
           </h1>
           <p className="mt-2 text-slate-600 dark:text-slate-400 max-w-2xl">
-            Alătură-te turnee de toate formatele și câștigă recompense exclusive
+            Join tournaments of every format and win exclusive rewards
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button variant="secondary" size="md">
-            <Calendar size={16} /> Program
+            <Calendar size={16} /> Schedule
           </Button>
           <CreateButton />
         </div>
@@ -119,7 +119,7 @@ export default async function TournamentsPage() {
       <div className="flex items-end justify-between mb-6">
         <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <Crown size={22} className="text-amber-500" />
-          Toate Turneele
+          All Tournaments
         </h2>
       </div>
 
@@ -127,10 +127,10 @@ export default async function TournamentsPage() {
         <div className="p-10 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-center space-y-3">
           <Trophy size={40} className="mx-auto text-slate-400" />
           <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">
-            Nu există turnee create încă
+            No tournaments created yet
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Creează primul turneu folosind butonul de mai sus.
+            Create the first tournament with the button above.
           </p>
         </div>
       ) : (
@@ -166,7 +166,7 @@ export default async function TournamentsPage() {
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">Jucători</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Players</div>
                     <div className="font-bold text-slate-800 dark:text-slate-200">
                       {cp} / {mp}
                     </div>
@@ -175,7 +175,7 @@ export default async function TournamentsPage() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">Premii</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">Prizes</div>
                     <div className="font-bold text-brand-600 dark:text-brand-400">
                       {t.prizePool || '—'}
                     </div>
@@ -192,11 +192,11 @@ export default async function TournamentsPage() {
                   className="w-full"
                 >
                   {t.status === 'live' ? (
-                    <>Vezi Acum <Swords size={14} /></>
+                    <>Watch Now <Swords size={14} /></>
                   ) : t.status === 'registration' ? (
-                    <>Înscrie-te <ArrowRight size={14} /></>
+                    <>Register <ArrowRight size={14} /></>
                   ) : (
-                    <>Vezi Rezultate <ArrowRight size={14} /></>
+                    <>View Results <ArrowRight size={14} /></>
                   )}
                 </Button>
               </CardContent>

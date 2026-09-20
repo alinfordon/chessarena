@@ -461,12 +461,12 @@ async function checkAndApplyBanIfNeeded(userId, stats) {
       consecutiveTopMoves: stats.maxConsecutiveTop,
       gamesAnalyzed: stats.games,
       expiresAt,
-      reason: 'Detecție automată anti-cheat: precizie mutări suspect ridicată.',
+      reason: 'Automatic anti-cheat detection: suspiciously high move accuracy.',
     });
     log('AntiCheat', `TEMP BAN 24h user ${userId} (${username || 'n/a'}) accuracy=${accuracy.toFixed(1)}% consecutive=${stats.maxConsecutiveTop} moves=${stats.totalMoves}`);
     io.to(`user:${userId}`).emit('user:banned', {
       banned: true,
-      reason: 'Detecție automată anti-cheat. Cont temporar suspendat 24 ore.',
+      reason: 'Automatic anti-cheat detection. Account temporarily suspended for 24 hours.',
       expiresAt,
     });
     return true;
@@ -1553,7 +1553,7 @@ io.on('connection', async (socket) => {
     if (!userId) return;
     const ban = await isUserCurrentlyBanned(userId);
     if (ban) {
-      socket.emit('game:error', { code: 'BANNED', message: ban.reason || 'Contul tău este suspendat.' });
+      socket.emit('game:error', { code: 'BANNED', message: ban.reason || 'Your account is suspended.' });
       return;
     }
     const it = parseInt(initialTime, 10);
@@ -1600,7 +1600,7 @@ io.on('connection', async (socket) => {
 
   socket.on('game:invite_user', async ({ toUsername, gameId }, ack) => {
     try {
-      if (!userId || !username) return ack?.({ ok: false, error: 'Autentificare necesară' });
+      if (!userId || !username) return ack?.({ ok: false, error: 'Authentication required' });
       if (!toUsername || typeof toUsername !== 'string') return ack?.({ ok: false, error: 'Username invalid' });
       if (!gameId || typeof gameId !== 'string') return ack?.({ ok: false, error: 'Game ID invalid' });
       const ban = await isUserCurrentlyBanned(userId);
@@ -1608,8 +1608,8 @@ io.on('connection', async (socket) => {
       const { User } = await getModels();
       if (!User) return ack?.({ ok: false, error: 'DB unavailable' });
       const target = await User.findOne({ username: String(toUsername).trim() }).select('_id username');
-      if (!target) return ack?.({ ok: false, error: 'Utilizator negăsit' });
-      if (String(target._id) === String(userId)) return ack?.({ ok: false, error: 'Nu te poți invita pe tine' });
+      if (!target) return ack?.({ ok: false, error: 'User not found' });
+      if (String(target._id) === String(userId)) return ack?.({ ok: false, error: 'You cannot invite yourself' });
       io.to(`user:${target._id}`).emit('notify:game_invite', {
         gameId,
         from: username,
@@ -1621,11 +1621,11 @@ io.on('connection', async (socket) => {
         log('Game', `${username} (${userId.slice(0,8)}) invited ${target.username} (${target._id.slice(0,8)}) to game ${gameId}`);
         return ack?.({ ok: true, online: true });
       } else {
-        return ack?.({ ok: true, online: false, message: 'Utilizatorul nu e online, dar invitația a fost trimisă.' });
+        return ack?.({ ok: true, online: false, message: 'User is offline, but the invite was sent.' });
       }
     } catch (e) {
       logError('Game Invite', e);
-      return ack?.({ ok: false, error: 'Eroare trimitere invitație' });
+      return ack?.({ ok: false, error: 'Could not send invite' });
     }
   });
 
@@ -1637,7 +1637,7 @@ io.on('connection', async (socket) => {
       if (userId) {
         const ban = await isUserCurrentlyBanned(userId);
         if (ban) {
-          socket.emit('game:error', { code: 'BANNED', message: ban.reason || 'Contul tău este suspendat.' });
+          socket.emit('game:error', { code: 'BANNED', message: ban.reason || 'Your account is suspended.' });
           socket.leave(`game:${gameId}`);
           return ack?.({ ok: false, error: ban.reason || 'Cont suspendat' });
         }

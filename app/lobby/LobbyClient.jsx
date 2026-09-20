@@ -160,7 +160,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
   const handleJoin = useCallback(
     async (game, withCode = null) => {
       if (!isAuthenticated) {
-        toast({ title: 'Trebuie să fiți logat', variant: 'warning' });
+        toast({ title: 'You need to be signed in', variant: 'warning' });
         router.push('/login');
         return;
       }
@@ -183,19 +183,19 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
         setJoinLoading(false);
         if (!data.ok) {
           toast({
-            title: data.error || 'Nu puteți intra',
+            title: data.error || 'Could not join',
             variant: 'warning',
           });
           return;
         }
         toast({
-          title: data.spectator ? 'Ați intrat ca spectator' : 'Ați intrat în joc!',
+          title: data.spectator ? 'Joined as spectator' : 'You joined the game!',
           variant: 'success',
         });
         router.push(`/game/${game.gameId}`);
       } catch (e) {
         setJoinLoading(false);
-        toast({ title: 'Eroare rețea', variant: 'warning' });
+        toast({ title: 'Network error', variant: 'warning' });
       }
     },
     [isAuthenticated, router, toast]
@@ -211,7 +211,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
     const url = `${window.location.origin}/play?invite=${game.inviteCode}`;
     navigator.clipboard?.writeText(url).then(() => {
       setCopied(game.gameId);
-      toast({ title: 'Link copiat!', variant: 'success' });
+      toast({ title: 'Link copied!', variant: 'success' });
       setTimeout(() => setCopied(null), 1500);
     });
   };
@@ -231,10 +231,10 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
         className="group flex items-center gap-2 sm:gap-3 p-3 sm:p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors border-b border-slate-100 dark:border-slate-800/60 last:border-0"
       >
         <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3">
-          <Avatar size="sm" alt={g.whiteUsername || 'Liber'} />
+          <Avatar size="sm" alt={g.whiteUsername || 'Open'} />
           <div className="min-w-0">
             <div className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
-              {g.whiteUsername || 'Liber'}
+              {g.whiteUsername || 'Open'}
             </div>
             <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
               {g.whiteRating || '—'}
@@ -246,7 +246,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
           <div className="flex items-center gap-1">
             <Badge variant="primary" size="sm">{tc}</Badge>
             {g.isPrivate && (
-              <Badge variant="warning" size="sm" title="Privat">
+              <Badge variant="warning" size="sm" title="Private">
                 <Lock size={10} />
               </Badge>
             )}
@@ -270,20 +270,20 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
         <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3 justify-end">
           <div className="text-right min-w-0">
             <div className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100 truncate">
-              {g.blackUsername || 'Liber'}
+              {g.blackUsername || 'Open'}
             </div>
             <div className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
               {g.blackRating || '—'}
             </div>
           </div>
-          <Avatar size="sm" alt={g.blackUsername || 'Liber'} status={g.blackUsername ? 'online' : null} />
+          <Avatar size="sm" alt={g.blackUsername || 'Open'} status={g.blackUsername ? 'online' : null} />
         </div>
 
         <div className="ml-2 flex items-center gap-1">
           {isLive ? (
             mine ? (
               <Button size="sm" variant="primary" href={`/game/${g.gameId}`}>
-                <Swords size={13} /> Continuă
+                <Swords size={13} /> Resume
               </Button>
             ) : (
               <Button size="sm" variant="ghost" href={`/game/${g.gameId}`}>
@@ -296,7 +296,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
                 <Button
                   size="iconSm"
                   variant="ghost"
-                  title="Copiază link invitație"
+                  title="Copy invite link"
                   onClick={() => copyInvite(g)}
                 >
                   {copied === g.gameId ? <Check size={14} /> : <Copy size={14} />}
@@ -339,7 +339,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
             Game Lobby
           </h1>
           <p className="mt-2 text-slate-600 dark:text-slate-400 text-sm sm:text-base">
-            Alege o partidă din așteptare, urmărește jocuri live, sau creează-ți propria ta partidă.
+            Pick a waiting game, watch live matches, or create your own.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
@@ -349,7 +349,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
             </Badge>
           ) : (
             <Badge variant="danger" size="sm" dot>
-              <WifiOff size={12} /> Reconectare...
+              <WifiOff size={12} /> Reconnecting...
             </Badge>
           )}
           <Button variant="secondary" href="/play" size="md">
@@ -374,7 +374,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
                     </span>
                     Live Games
                   </CardTitle>
-                  <CardDescription>Partide în desfășurare acum</CardDescription>
+                  <CardDescription>Games in progress right now</CardDescription>
                 </div>
                 <Badge variant="success" size="md" dot>
                   {liveGames.length} active
@@ -385,8 +385,8 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
               {liveGames.length === 0 ? (
                 <EmptyStateRow
                   icon={<Swords size={24} />}
-                  title="Nicio partidă live acum"
-                  subtitle="Deveniți primul — creați o partidă în /play"
+                  title="No live games right now"
+                  subtitle="Be the first — create a game in Play"
                   action={<Button href="/play" size="sm">Create Game</Button>}
                 />
               ) : (
@@ -407,10 +407,10 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
                     <Clock size={18} className="text-amber-500" />
                     Waiting Rooms
                   </CardTitle>
-                  <CardDescription>Jocuri deschise pentru oponenți noi</CardDescription>
+                  <CardDescription>Open games looking for opponents</CardDescription>
                 </div>
                 <Badge variant="warning" size="md" dot>
-                  {waitingRooms.length} în așteptare
+                  {waitingRooms.length} waiting
                 </Badge>
               </div>
             </CardHeader>
@@ -418,9 +418,9 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
               {waitingRooms.length === 0 ? (
                 <EmptyStateRow
                   icon={<Clock size={24} />}
-                  title="Nicio cameră în așteptare"
-                  subtitle="Creați-vă propria cameră și așteptați un oponent"
-                  action={<Button href="/play" size="sm" variant="secondary">Creează Cameră</Button>}
+                  title="No waiting rooms"
+                  subtitle="Create your own room and wait for an opponent"
+                  action={<Button href="/play" size="sm" variant="secondary">Create Room</Button>}
                 />
               ) : (
                 <div>
@@ -440,15 +440,15 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
               Online Players
             </CardTitle>
             <CardDescription>
-              {online.filter((p) => p.isOnline).length} jucători online
+              {online.filter((p) => p.isOnline).length} players online
             </CardDescription>
           </CardHeader>
           <CardContent className="p-2 sm:p-3">
             {online.length === 0 ? (
               <EmptyStateRow
                 icon={<Users size={24} />}
-                title="Nimeni online"
-                subtitle="Vei apărea aici după login"
+                title="Nobody online"
+                subtitle="You'll show up here after you sign in"
               />
             ) : (
               <div className="space-y-0.5 max-h-[520px] overflow-y-auto scrollbar-thin pr-1">
@@ -478,7 +478,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
                       variant="ghost"
                       size="iconSm"
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Invită la joc"
+                      title="Invite to a game"
                     >
                       <Swords size={15} />
                     </Button>
@@ -493,13 +493,13 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
       <Modal
         isOpen={!!joinModal}
         onClose={() => setJoinModal(null)}
-        title={`Intră în joc privat — ${joinModal ? `${Math.floor(joinModal.initialTime / 60)}+${joinModal.increment}` : ''}`}
-        description="Introduceți codul de invitație furnizat de gazdă."
+        title={`Join private game — ${joinModal ? `${Math.floor(joinModal.initialTime / 60)}+${joinModal.increment}` : ''}`}
+        description="Enter the invite code provided by the host."
         size="sm"
         footer={
           <>
             <Button variant="ghost" onClick={() => setJoinModal(null)}>
-              Anulează
+              Cancel
             </Button>
             <Button
               variant="primary"
@@ -507,13 +507,13 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
               onClick={confirmJoinWithCode}
               disabled={!inviteCode.trim()}
             >
-              <Check size={15} /> Intră
+              <Check size={15} /> Join
             </Button>
           </>
         }
       >
         <Input
-          label="Cod invitație"
+          label="Invite code"
           placeholder="Ex: AB12CD"
           value={inviteCode}
           onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
@@ -523,7 +523,7 @@ export default function LobbyClient({ initialGames = [], initialOnline = [] }) {
         />
         {joinModal?.hostUsername && (
           <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-            <AlertCircle size={14} /> Gazdă: <strong>{joinModal.hostUsername}</strong>
+            <AlertCircle size={14} /> Host: <strong>{joinModal.hostUsername}</strong>
           </div>
         )}
       </Modal>

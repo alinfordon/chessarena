@@ -51,9 +51,9 @@ function Table({ players, ratingKey, label }) {
     return (
       <div className="p-10 text-center">
         <Crown size={36} className="mx-auto mb-3 text-slate-400" />
-        <p className="font-semibold text-slate-700 dark:text-slate-300">Niciun jucător încă</p>
+        <p className="font-semibold text-slate-700 dark:text-slate-300">No players yet</p>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Clasamentul se umple după ce se înregistrează conturi.
+          The ranking fills up as accounts are created.
         </p>
       </div>
     );

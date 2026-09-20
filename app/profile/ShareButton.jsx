@@ -14,14 +14,14 @@ export default function ShareButton({ username }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      window.prompt('Copiază linkul profilului', url);
+      window.prompt('Copy profile link', url);
     }
   }
 
   return (
     <Button variant="secondary" size="sm" onClick={handleShare}>
       {copied ? <Check size={14} /> : <Share2 size={14} />}
-      {copied ? 'Copiat' : 'Share'}
+      {copied ? 'Copied' : 'Share'}
     </Button>
   );
 }

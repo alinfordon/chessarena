@@ -11,7 +11,7 @@ export async function GET(req, ctx) {
     await dbConnect();
     const { id } = await ctx.params;
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return NextResponse.json({ ok: false, error: 'ID turneu invalid' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'Invalid tournament ID' }, { status: 400 });
     }
 
     const t = await Tournament.findById(id)
@@ -19,7 +19,7 @@ export async function GET(req, ctx) {
       .populate({ path: 'winners', select: 'username avatar rating' })
       .lean();
     if (!t) {
-      return NextResponse.json({ ok: false, error: 'Turneu negăsit' }, { status: 404 });
+      return NextResponse.json({ ok: false, error: 'Tournament not found' }, { status: 404 });
     }
 
     const [players, pairings, user] = await Promise.all([
@@ -75,6 +75,6 @@ export async function GET(req, ctx) {
     });
   } catch (e) {
     console.error('[API][tournaments/:id] GET Error:', e);
-    return NextResponse.json({ ok: false, error: 'Eroare server' }, { status: 500 });
+    return NextResponse.json({ ok: false, error: 'Server error' }, { status: 500 });
   }
 }

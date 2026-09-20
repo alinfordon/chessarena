@@ -80,7 +80,7 @@ export function useGame(gameId) {
     emit('game:join', { gameId }, (ack) => {
       setJoining(false);
       if (!ack?.ok) {
-        setError(ack?.error || 'Nu se poate intra în joc');
+        setError(ack?.error || 'Could not join the game');
         return;
       }
       setSpectator(!!ack?.spectator);
@@ -110,7 +110,7 @@ export function useGame(gameId) {
     }
     emit('game:move', opts, (ack) => {
       if (!ack?.ok) {
-        setError(ack?.error || 'Mutare invalidă');
+        setError(ack?.error || 'Invalid move');
       }
     });
   }, [gameId, emit]);
@@ -119,7 +119,7 @@ export function useGame(gameId) {
     if (!gameId) return;
     setError(null);
     emit('game:resign', { gameId }, (ack) => {
-      if (!ack?.ok) setError(ack?.error || 'Abandon eșuat');
+      if (!ack?.ok) setError(ack?.error || 'Resign failed');
     });
   }, [gameId, emit]);
 
@@ -149,7 +149,7 @@ export function useGame(gameId) {
     if (!gameId || !text?.trim()) return;
     setError(null);
     emit('chat:message', { gameId, text: text.trim() }, (ack) => {
-      if (!ack?.ok) setError(ack?.error || 'Mesajul nu a fost trimis');
+      if (!ack?.ok) setError(ack?.error || 'Message was not sent');
     });
   }, [gameId, emit]);
 
@@ -216,7 +216,7 @@ export function useGame(gameId) {
 
     add('game:error', (payload) => {
       if (payload?.gameId && payload.gameId !== gameId) return;
-      setError(payload?.message || 'Eroare joc');
+      setError(payload?.message || 'Game error');
     });
 
     return () => {

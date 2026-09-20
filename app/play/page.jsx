@@ -1,8 +1,8 @@
 import PlayClient from './PlayClient';
 
 export const metadata = {
-  title: 'Joc Nou | Chess Arena',
-  description: 'Creează o partidă de șah: Quick Match, Custom sau invită un prieten.',
+  title: 'New Game | Chess Arena',
+  description: 'Create a chess game: Quick Match, Custom, or invite a friend.',
 };
 
 export default function PlayPage() {

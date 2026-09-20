@@ -107,7 +107,7 @@ export default function GameClient({ gameId }) {
       .then((data) => {
         if (cancelled) return;
         if (!data.ok) {
-          setInitialError(data.error || 'Joc negăsit');
+          setInitialError(data.error || 'Game not found');
         } else {
           setInitial(data.game);
         }
@@ -220,14 +220,14 @@ export default function GameClient({ gameId }) {
 
   const white = {
     id: merged.whitePlayerId,
-    username: merged.whiteUsername || merged.whitePlayer?.username || 'Alb',
+    username: merged.whiteUsername || merged.whitePlayer?.username || 'White',
     rating: merged.whiteRating || merged.whitePlayer?.rating,
     avatar: merged.whitePlayer?.avatar || null,
     delta: merged.ratingDeltaWhite,
   };
   const black = {
     id: merged.blackPlayerId,
-    username: merged.blackUsername || merged.blackPlayer?.username || 'Negru',
+    username: merged.blackUsername || merged.blackPlayer?.username || 'Black',
     rating: merged.blackRating || merged.blackPlayer?.rating,
     avatar: merged.blackPlayer?.avatar || null,
     delta: merged.ratingDeltaBlack,
@@ -251,7 +251,7 @@ export default function GameClient({ gameId }) {
   function handleResignConfirmed() {
     setConfirmResign(false);
     resign();
-    toast({ title: 'Ați abandonat partida', variant: 'warning' });
+    toast({ title: 'You resigned the game', variant: 'warning' });
   }
 
   function handleSendMsg(e) {
@@ -271,15 +271,15 @@ export default function GameClient({ gameId }) {
 
   const TerminationLabel = ({ t }) => {
     const map = {
-      checkmate: 'Șah mat',
-      resignation: 'Abandon',
-      timeout: 'Timp expirat',
-      draw_agreement: 'Remiză acordată',
-      stalemate: 'Pat',
-      threefold: 'Repetiție triplă',
-      fifty_moves: 'Regula celor 50 de mutări',
-      insufficient: 'Material insuficient',
-      aborted: 'Abandonată',
+      checkmate: 'Checkmate',
+      resignation: 'Resignation',
+      timeout: 'Timeout',
+      draw_agreement: 'Draw agreed',
+      stalemate: 'Stalemate',
+      threefold: 'Threefold repetition',
+      fifty_moves: 'Fifty-move rule',
+      insufficient: 'Insufficient material',
+      aborted: 'Aborted',
     };
     return <span>{map[t] || t || '—'}</span>;
   };
@@ -287,7 +287,7 @@ export default function GameClient({ gameId }) {
   if (initialLoading && !initial) {
     return (
       <div className="min-h-[70vh]">
-        <LoadingScreen label="Se încarcă partida..." />
+        <LoadingScreen label="Loading game..." />
       </div>
     );
   }
@@ -298,13 +298,13 @@ export default function GameClient({ gameId }) {
         <div className="p-6 rounded-2xl border border-red-200/60 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20">
           <XCircle className="mx-auto mb-3 text-red-500" size={48} />
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-1">
-            Eroare încărcare partidă
+            Could not load game
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-5">
             {initialError}
           </p>
           <Button href="/lobby" variant="primary">
-            <ArrowLeft size={16} /> Înapoi la Lobby
+            <ArrowLeft size={16} /> Back to Lobby
           </Button>
         </div>
       </div>
@@ -335,7 +335,7 @@ export default function GameClient({ gameId }) {
             <Badge variant="danger" size="sm" dot>Offline</Badge>
           )}
           {joining && (
-            <Badge variant="warning" size="sm"><Spinner size="sm" className="!h-3 !w-3 !border" /> Conectare</Badge>
+            <Badge variant="warning" size="sm"><Spinner size="sm" className="!h-3 !w-3 !border" /> Connecting</Badge>
           )}
         </div>
       </div>
@@ -367,19 +367,19 @@ export default function GameClient({ gameId }) {
           <div className="rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/70 px-2.5 py-2 shrink-0">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Ultima mutare</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last move</div>
                 <div className="font-mono text-xl font-black text-slate-900 dark:text-white truncate leading-tight">
                   {lastSan || '—'}
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Mutări</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Moves</div>
                 <div className="text-xl font-black tabular-nums leading-tight">{moves.length}</div>
               </div>
             </div>
             {merged.isPrivate && merged.inviteCode && (
               <Badge variant="warning" size="sm" className="mt-1.5">
-                <Eye size={10} /> Privat {merged.inviteCode}
+                <Eye size={10} /> Private {merged.inviteCode}
               </Badge>
             )}
           </div>
@@ -403,7 +403,7 @@ export default function GameClient({ gameId }) {
                 disabled={disabled || spectator || isReplay}
                 onClick={() => setConfirmResign(true)}
               >
-                <Flag size={12} /> Abandon
+                <Flag size={12} /> Resign
               </Button>
               <Button
                 variant="secondary"
@@ -412,10 +412,10 @@ export default function GameClient({ gameId }) {
                 disabled={disabled || spectator || isReplay}
                 onClick={() => {
                   offerDraw();
-                  toast({ title: 'Oferă remiză — trimisă', variant: 'info' });
+                  toast({ title: 'Draw offer sent', variant: 'info' });
                 }}
               >
-                <Handshake size={12} /> Remiză
+                <Handshake size={12} /> Draw
               </Button>
               <Button
                 variant="ghost"
@@ -424,19 +424,19 @@ export default function GameClient({ gameId }) {
                 disabled={!finished}
                 onClick={() => {
                   offerRematch();
-                  toast({ title: 'Cerere revanșă trimisă', variant: 'info' });
+                  toast({ title: 'Rematch request sent', variant: 'info' });
                 }}
               >
                 <RotateCcw size={12} />
               </Button>
             </div>
             <div className="flex items-center justify-center gap-0.5">
-              <Button variant="ghost" size="iconSm" className="!h-7 !w-7" onClick={goStart} disabled={!moves.length} title="Început (Home)"><ChevronsLeft size={14} /></Button>
-              <Button variant="ghost" size="iconSm" className="!h-7 !w-7" onClick={goPrev} disabled={!moves.length} title="Înapoi (←)"><SkipBack size={14} /></Button>
+              <Button variant="ghost" size="iconSm" className="!h-7 !w-7" onClick={goStart} disabled={!moves.length} title="Start (Home)"><ChevronsLeft size={14} /></Button>
+              <Button variant="ghost" size="iconSm" className="!h-7 !w-7" onClick={goPrev} disabled={!moves.length} title="Back (←)"><SkipBack size={14} /></Button>
               <Button variant={autoplay ? 'secondary' : 'ghost'} size="iconSm" className="!h-7 !w-7" onClick={() => setAutoplay((a) => !a)} disabled={!moves.length} title="Autoplay">
                 {autoplay ? <PauseIcon size={14} /> : <PlayIcon size={14} />}
               </Button>
-              <Button variant="ghost" size="iconSm" className="!h-7 !w-7" onClick={goNext} disabled={!moves.length} title="Înainte (→)"><SkipForward size={14} /></Button>
+              <Button variant="ghost" size="iconSm" className="!h-7 !w-7" onClick={goNext} disabled={!moves.length} title="Forward (→)"><SkipForward size={14} /></Button>
               <Button variant="ghost" size="iconSm" className="!h-7 !w-7" onClick={goEnd} disabled={!moves.length} title="Live (End)"><ChevronsRight size={14} /></Button>
             </div>
           </div>
@@ -463,14 +463,14 @@ export default function GameClient({ gameId }) {
             />
             {isReplay && (
               <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-md shadow-lg pointer-events-none">
-                Revizuire
+                Review
               </div>
             )}
             {!spectator && !isLive && !finished && (
               <div className="absolute inset-0 rounded-lg bg-slate-950/55 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
                 <div className="px-5 py-3 rounded-xl bg-amber-500 text-white text-center shadow-2xl">
-                  <div className="text-lg font-black tracking-tight">Aștept oponentul</div>
-                  <div className="text-xs font-semibold opacity-90 mt-0.5">Partida pornește când intră al doilea jucător</div>
+                  <div className="text-lg font-black tracking-tight">Waiting for opponent</div>
+                  <div className="text-xs font-semibold opacity-90 mt-0.5">The game starts when the second player joins</div>
                 </div>
               </div>
             )}
@@ -488,7 +488,7 @@ export default function GameClient({ gameId }) {
                 {webrtc.connectionState === 'connected' ? (
                   <Badge variant="success" size="sm" dot>HD</Badge>
                 ) : webrtc.connectionState === 'failed' || webrtc.iceState === 'failed' ? (
-                  <Badge variant="danger" size="sm" dot>Eroare</Badge>
+                  <Badge variant="danger" size="sm" dot>Error</Badge>
                 ) : webrtc.connectionState === 'connecting' || webrtc.iceState === 'checking' ? (
                   <Badge variant="warning" size="sm" dot>…</Badge>
                 ) : !webrtc.isReady && !webrtc.remoteStream ? (
@@ -516,8 +516,8 @@ export default function GameClient({ gameId }) {
                     />
                     <p className="text-[10px] text-slate-400 mt-1.5">
                       {webrtc.connectionState === 'connecting' || webrtc.iceState === 'checking'
-                        ? 'Se stabilește conexiunea...'
-                        : 'Video oprit'}
+                        ? 'Connecting...'
+                        : 'Video off'}
                     </p>
                   </div>
                 )}
@@ -554,14 +554,14 @@ export default function GameClient({ gameId }) {
                       try {
                         await webrtc.getLocalMedia(true, true);
                         webrtc.offerCall(opponentId);
-                        toast({ title: 'Apel video pornit', variant: 'info' });
+                        toast({ title: 'Video call started', variant: 'info' });
                       } catch (e) {
-                        toast({ title: e.message || 'Eroare la pornirea camerei', variant: 'danger' });
+                        toast({ title: e.message || 'Could not start camera', variant: 'danger' });
                       }
                     }
                   }}
                 >
-                  <Video size={13} /> Pornește video
+                  <Video size={13} /> Start video
                 </Button>
               )}
 
@@ -577,7 +577,7 @@ export default function GameClient({ gameId }) {
                       ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
                       : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
                   )}
-                  title={webrtc.micOn ? 'Microfon off' : 'Microfon on'}
+                  title={webrtc.micOn ? 'Mute mic' : 'Unmute mic'}
                 >
                   {webrtc.micOn ? <Mic size={14} /> : <MicOff size={14} />}
                 </button>
@@ -601,7 +601,7 @@ export default function GameClient({ gameId }) {
                       ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
                       : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
                   )}
-                  title={webrtc.speakerOn ? 'Boxe off' : 'Boxe on'}
+                  title={webrtc.speakerOn ? 'Mute speakers' : 'Unmute speakers'}
                 >
                   {webrtc.speakerOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
                 </button>
@@ -612,7 +612,7 @@ export default function GameClient({ gameId }) {
                     else document.exitFullscreen?.();
                   }}
                   className="p-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center"
-                  title="Ecran complet"
+                  title="Fullscreen"
                 >
                   <Maximize size={14} />
                 </button>
@@ -620,10 +620,10 @@ export default function GameClient({ gameId }) {
                   <button
                     onClick={() => {
                       webrtc.reconnect();
-                      toast({ title: 'Reconectare video...', variant: 'info' });
+                      toast({ title: 'Reconnecting video...', variant: 'info' });
                     }}
                     className="p-1.5 rounded-md bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center"
-                    title="Reconectare"
+                    title="Reconnect"
                   >
                     <RotateCcw size={14} />
                   </button>
@@ -642,7 +642,7 @@ export default function GameClient({ gameId }) {
             >
               {messages.length === 0 ? (
                 <div className="p-3 text-center text-[11px] text-slate-400 dark:text-slate-500 italic">
-                  Să înceapă conversația. GL HF!
+                  Start the conversation. GL HF!
                 </div>
               ) : (
                 messages.map((m, i) => {
@@ -672,7 +672,7 @@ export default function GameClient({ gameId }) {
                 <input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Mesaj..."
+                  placeholder="Message..."
                   maxLength={500}
                   disabled={spectator}
                   className="flex-1 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/60 px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 disabled:opacity-60"
@@ -695,16 +695,16 @@ export default function GameClient({ gameId }) {
       <Modal
         isOpen={confirmResign}
         onClose={() => setConfirmResign(false)}
-        title="Confirmați abandonul?"
-        description="Odată abandonată, partida se consideră pierdută și rating-ul se actualizează."
+        title="Resign the game?"
+        description="Once you resign, the game is lost and ratings are updated."
         size="sm"
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirmResign(false)}>
-              Renunță
+              Cancel
             </Button>
             <Button variant="danger" onClick={handleResignConfirmed}>
-              Abandon
+              Resign
             </Button>
           </>
         }
@@ -713,15 +713,15 @@ export default function GameClient({ gameId }) {
       <Modal
         isOpen={drawModal}
         onClose={() => setDrawModal(false)}
-        title="Ofertă de remiză"
+        title="Draw offer"
         description={`${
           (drawOffer === white.id ? white : black).username
-        } oferă remiză. Acceptați?`}
+        } offers a draw. Accept?`}
         size="sm"
         footer={
           <>
             <Button variant="danger" onClick={() => { declineDraw(); setDrawModal(false); }}>
-              Refuză
+              Decline
             </Button>
             <Button variant="success" onClick={() => { acceptDraw(); setDrawModal(false); }}>
               <Check size={16} /> Accept
@@ -735,13 +735,13 @@ export default function GameClient({ gameId }) {
         onClose={() => setFinishModal(false)}
         title={
           finished?.result === 'draw'
-            ? 'Remiză!'
-            : (finished?.result === 'white' ? 'Victorie — Alb!' : 'Victorie — Negru!')
+            ? 'Draw!'
+            : (finished?.result === 'white' ? 'White wins!' : 'Black wins!')
         }
         description={
           <>
             <div className="mb-1">
-              Mod terminare: <TerminationLabel t={finished?.termination} />.
+              Ended by: <TerminationLabel t={finished?.termination} />.
             </div>
             {(white.delta !== undefined || black.delta !== undefined) && (
               <div className="mt-2 space-y-1 text-sm">
@@ -773,17 +773,17 @@ export default function GameClient({ gameId }) {
               <ArrowLeft size={16} /> Lobby
             </Button>
             <Button variant="primary" onClick={() => { goStart(); setFinishModal(false); }}>
-              <RotateCcw size={16} /> Revizuire
+              <RotateCcw size={16} /> Review
             </Button>
             <Button
               variant="primary"
               onClick={() => {
                 offerRematch();
                 setFinishModal(false);
-                toast({ title: 'Cerere revanșă trimisă', variant: 'info' });
+                toast({ title: 'Rematch request sent', variant: 'info' });
               }}
             >
-              <Swords size={16} /> Revanșă
+              <Swords size={16} /> Rematch
             </Button>
           </>
         }
@@ -819,10 +819,10 @@ function TurnBanner({ waiting, finished, myTurn, isCheck, spectator, opponentNam
   if (finished) {
     const label =
       finished.result === 'draw'
-        ? 'Remiză'
+        ? 'Draw'
         : finished.result === 'white'
-          ? `${whiteName || 'Alb'} a câștigat`
-          : `${blackName || 'Negru'} a câștigat`;
+          ? `${whiteName || 'White'} won`
+          : `${blackName || 'Black'} won`;
     return (
       <button
         type="button"
@@ -830,41 +830,41 @@ function TurnBanner({ waiting, finished, myTurn, isCheck, spectator, opponentNam
         className="w-full rounded-xl px-2.5 py-2 bg-emerald-600 text-white text-center font-black tracking-wide shadow-lg shadow-emerald-600/30 text-sm"
       >
         {label}
-        <span className="block text-[10px] font-semibold opacity-70 mt-0.5">Vezi rezultatul</span>
+        <span className="block text-[10px] font-semibold opacity-70 mt-0.5">View result</span>
       </button>
     );
   }
   if (waiting) {
     return (
       <div className="rounded-xl px-2.5 py-2 bg-amber-500 text-white text-center font-black tracking-wide shadow-lg shadow-amber-500/30 text-sm">
-        Aștept oponentul...
+        Waiting for opponent...
       </div>
     );
   }
   if (spectator) {
     return (
       <div className="rounded-xl px-2.5 py-1.5 bg-purple-600 text-white text-center font-bold text-sm">
-        Mod spectator{lastSan ? ` · ${lastSan}` : ''}
+        Spectator{lastSan ? ` · ${lastSan}` : ''}
       </div>
     );
   }
   if (myTurn && isCheck) {
     return (
       <div className="rounded-xl px-2.5 py-2 bg-red-600 text-white text-center font-black tracking-wide shadow-lg shadow-red-600/40 animate-pulse">
-        ȘAH — Mutarea ta
+        CHECK — Your move
       </div>
     );
   }
   if (myTurn) {
     return (
       <div className="rounded-xl px-2.5 py-2 bg-emerald-500 text-white text-center font-black tracking-wide shadow-lg shadow-emerald-500/30">
-        Mutarea ta
+        Your move
       </div>
     );
   }
   return (
     <div className="rounded-xl px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-center font-bold text-sm">
-      Rândul lui {opponentName || 'oponent'}
+      {opponentName || 'Opponent'} to move
     </div>
   );
 }
@@ -899,7 +899,7 @@ function PlayerStrip({ player, side, me, active, ended, time, delta }) {
             </span>
             {me && (
               <span className="shrink-0 text-[9px] font-black uppercase tracking-widest opacity-60">
-                Tu
+                You
               </span>
             )}
             {typeof delta === 'number' && (
@@ -912,7 +912,7 @@ function PlayerStrip({ player, side, me, active, ended, time, delta }) {
             )}
           </div>
           <div className={clsx('text-[10px] font-semibold', active ? 'opacity-70' : 'text-slate-500 dark:text-slate-400')}>
-            {side === 'white' ? 'Alb' : 'Negru'} · {rating} Elo
+            {side === 'white' ? 'White' : 'Black'} · {rating} Elo
           </div>
         </div>
       </div>

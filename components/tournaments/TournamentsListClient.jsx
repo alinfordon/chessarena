@@ -19,10 +19,10 @@ const TC_PRESETS = [
 ];
 
 const TYPE_OPTIONS = [
-  { id: 'arena', name: 'Arena', icon: Shuffle, desc: 'Jocuri continue. Timp total. Scor 2/1/0.' },
-  { id: 'swiss', name: 'Swiss', icon: Target, desc: 'Runde cu împerechere pe scor.' },
-  { id: 'round_robin', name: 'Round Robin', icon: Users, desc: 'Toți cu toții (max 16 jucători).' },
-  { id: 'single_elimination', name: 'KO', icon: Binary, desc: 'Knockout. O înfrângere = eliminat.' },
+  { id: 'arena', name: 'Arena', icon: Shuffle, desc: 'Continuous games. Fixed time. Score 2/1/0.' },
+  { id: 'swiss', name: 'Swiss', icon: Target, desc: 'Rounds paired by score.' },
+  { id: 'round_robin', name: 'Round Robin', icon: Users, desc: 'Everyone vs everyone (max 16 players).' },
+  { id: 'single_elimination', name: 'KO', icon: Binary, desc: 'Knockout. One loss and you are out.' },
 ];
 
 export function CreateButton() {
@@ -30,7 +30,7 @@ export function CreateButton() {
   if (!ctx) return null;
   return (
     <Button size="md" onClick={ctx.open}>
-      <Plus size={16} /> Creează Turneu
+      <Plus size={16} /> Create Tournament
     </Button>
   );
 }
@@ -83,14 +83,14 @@ function CreateModal() {
         body: JSON.stringify(payload),
       });
       const data = await r.json().catch(() => ({}));
-      if (!r.ok || !data.ok) throw new Error(data.error || 'Eroare la crearea turneului');
+      if (!r.ok || !data.ok) throw new Error(data.error || 'Could not create tournament');
       ctx.close();
       router.refresh();
       if (data.tournament?._id) {
         router.push(`/tournaments/${data.tournament._id}`);
       }
     } catch (e) {
-      setError(e?.message || 'Eroare necunoscută');
+      setError(e?.message || 'Unknown error');
     } finally {
       setLoading(false);
     }
@@ -101,15 +101,15 @@ function CreateModal() {
       isOpen={ctx.isOpen}
       onClose={ctx.close}
       size="lg"
-      title="Creează un turneu nou"
-      description="Configurează formatul, controlul de timp și detalile turneului."
+      title="Create a new tournament"
+      description="Set the format, time control, and tournament details."
       footer={
         <>
           <Button variant="ghost" onClick={ctx.close} disabled={loading}>
-            Anulează
+            Cancel
           </Button>
           <Button onClick={submit} disabled={loading || !canSubmit} loading={loading}>
-            <Trophy size={16} /> Creează Turneu
+            <Trophy size={16} /> Create Tournament
           </Button>
         </>
       }
@@ -124,35 +124,35 @@ function CreateModal() {
       <div className="space-y-5">
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-            Nume turneu <span className="text-red-500">*</span>
+            Tournament name <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
-            placeholder="ex. Weekly Blitz Arena #1"
+            placeholder="e.g. Weekly Blitz Arena #1"
             className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
           />
         </div>
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-            Descriere
+            Description
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={1000}
             rows={2}
-            placeholder="Scurtă descriere..."
+            placeholder="Short description..."
             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50 resize-none"
           />
         </div>
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Format turneu
+            Tournament format
           </label>
           <Tabs defaultValue={type} onValueChange={setType} className="w-full">
             <TabsList className="grid grid-cols-4 mb-3 w-full">
@@ -178,7 +178,7 @@ function CreateModal() {
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Control de timp
+            Time control
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {TC_PRESETS.map((t, i) => (
@@ -204,7 +204,7 @@ function CreateModal() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Începe (data & ora)
+              Starts (date & time)
             </label>
             <input
               type="datetime-local"
@@ -215,7 +215,7 @@ function CreateModal() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Durată (ore)
+              Duration (hours)
             </label>
             <input
               type="number"
@@ -231,7 +231,7 @@ function CreateModal() {
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Max. jucători
+              Max. players
             </label>
             <input
               type="number"
@@ -272,14 +272,14 @@ function CreateModal() {
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-            Premii (opțional)
+            Prizes (optional)
           </label>
           <input
             type="text"
             value={prizePool}
             onChange={(e) => setPrizePool(e.target.value)}
             maxLength={100}
-            placeholder="ex. 5000 points + Badge Campion"
+            placeholder="e.g. 5000 points + Champion badge"
             className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
           />
         </div>
