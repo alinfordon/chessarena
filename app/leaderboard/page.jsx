@@ -15,6 +15,12 @@ import User from '@/models/User';
 
 export const dynamic = 'force-dynamic';
 
+export const metadata = {
+  title: 'Leaderboard',
+  description:
+    'See the top Chess Arena players by Elo rating across blitz, rapid, and classical time controls.',
+};
+
 function serializePlayer(u) {
   return {
     username: u.username,

@@ -68,7 +68,7 @@ export default function Footer() {
             </Link>
             <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-sm mb-5">
               Play chess in real-time, compete in tournaments, and connect with
-              players from around the world. Premium experience for every level.
+              players from around the world. A product of Sky Game &amp; Robotics Development.
             </p>
             <div className="flex items-center gap-2">
               {socials.map(({ icon: Icon, href, label }) => (
@@ -111,7 +111,7 @@ export default function Footer() {
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             Made with <Heart size={14} className="text-red-500 fill-red-500" /> by
-            the Chess Arena Team
+            Sky Game &amp; Robotics Development
           </p>
         </div>
       </div>

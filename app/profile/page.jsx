@@ -46,9 +46,9 @@ const ACHIEVEMENTS_DEF = [
 ];
 
 export const metadata = {
-  title: 'Profile · Chess Arena',
-  description: 'Your profile, stats, ratings, achievements and game history',
-  robots: 'noindex,nofollow',
+  title: 'Profile',
+  description: 'Your Chess Arena profile, stats, ratings, achievements and game history.',
+  robots: { index: false, follow: false },
 };
 
 async function getRecentGames(userId) {

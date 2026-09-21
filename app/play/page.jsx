@@ -1,8 +1,9 @@
 import PlayClient from './PlayClient';
 
 export const metadata = {
-  title: 'New Game | Chess Arena',
-  description: 'Create a chess game: Quick Match, Custom, or invite a friend.',
+  title: 'Play Chess',
+  description:
+    'Start a live chess game on Chess Arena: Quick Match, custom time controls, or invite a friend. Built by Sky Game & Robotics Development.',
 };
 
 export default function PlayPage() {

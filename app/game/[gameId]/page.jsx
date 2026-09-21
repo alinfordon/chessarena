@@ -1,7 +1,7 @@
 import GameClient from './GameClient';
 
 export const metadata = {
-  title: 'Live Game | Chess Arena',
+  title: 'Live Game',
   description: 'Watch or play a live chess game on Chess Arena.',
   robots: { index: false, follow: false },
 };

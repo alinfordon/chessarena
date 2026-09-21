@@ -18,6 +18,25 @@ function isValidMongoId(id) {
 
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  if (!isValidMongoId(id)) {
+    return { title: 'Tournament', robots: { index: false, follow: true } };
+  }
+  try {
+    await dbConnect();
+    const t = await Tournament.findById(id).select('name type status').lean();
+    if (!t) return { title: 'Tournament not found' };
+    const typeLabel = TYPE_META[t.type]?.label || 'Tournament';
+    return {
+      title: t.name || 'Tournament',
+      description: `${typeLabel} chess tournament on Chess Arena${t.status ? ` · ${t.status}` : ''}. Built by Sky Game & Robotics Development.`,
+    };
+  } catch {
+    return { title: 'Tournament' };
+  }
+}
+
 const TYPE_META = {
   arena: { label: 'Arena' },
   swiss: { label: 'Swiss' },

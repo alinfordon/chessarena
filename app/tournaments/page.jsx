@@ -9,6 +9,12 @@ import { Card, CardContent } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import TournamentsListClient, { CreateButton } from '@/components/tournaments/TournamentsListClient';
 
+export const metadata = {
+  title: 'Chess Tournaments',
+  description:
+    'Join Arena, Swiss, Round Robin, and Single Elimination chess tournaments on Chess Arena.',
+};
+
 const TYPE_META = {
   arena: { icon: Shuffle, label: 'Arena' },
   swiss: { icon: Target, label: 'Swiss' },

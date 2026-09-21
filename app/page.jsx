@@ -182,6 +182,9 @@ export default async function HomePage() {
             Play chess in real time, join tournaments, and connect with
             players from around the world.
           </p>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+            Built by Sky Game &amp; Robotics Development
+          </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
             <Button size="lg"  href="/play" className="w-full sm:w-auto min-w-[160px]">
               <Swords size={20} />
@@ -591,6 +594,9 @@ export default async function HomePage() {
             </h2>
             <p className="mt-4 text-white/85 max-w-xl mx-auto text-base sm:text-lg">
               Join thousands of players today. Your first match is one click away.
+            </p>
+            <p className="mt-3 text-white/70 text-sm">
+              Chess Arena is a Sky Game &amp; Robotics Development product.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
               <Button
