@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSocket } from './useSocket';
 
-export function useWebRTC(gameId) {
+export function useWebRTC(gameId, { audioOnly = false } = {}) {
   const { connected, emit, on, off } = useSocket();
 
   const [localStream, setLocalStream] = useState(null);
@@ -20,21 +20,24 @@ export function useWebRTC(gameId) {
   const localStreamRef = useRef(null);
   const pendingOfferRef = useRef(null);
   const opponentIdRef = useRef(null);
+  const audioOnlyRef = useRef(audioOnly);
+  audioOnlyRef.current = audioOnly;
 
-  const getLocalMedia = useCallback(async (video = true, audio = true) => {
+  const getLocalMedia = useCallback(async (video, audio = true) => {
+    const wantVideo = video ?? !audioOnlyRef.current;
     try {
       setError(null);
       if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
         throw new Error('This browser does not support media devices');
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: video ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } : false,
+        video: wantVideo ? { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' } : false,
         audio: audio ? { echoCancellation: true, noiseSuppression: true } : false,
       });
       localStreamRef.current = stream;
       setLocalStream(stream);
       setMicOn(audio);
-      setCameraOn(video);
+      setCameraOn(wantVideo);
       setIsReady(true);
       return stream;
     } catch (err) {
@@ -137,7 +140,7 @@ export function useWebRTC(gameId) {
       if (!gameId) return;
       if (!connected) { setError('You are not connected to the server'); return; }
       if (!localStreamRef.current) {
-        await getLocalMedia(true, true);
+        await getLocalMedia(!audioOnlyRef.current, true);
         if (!localStreamRef.current) return;
       }
       try {
@@ -165,7 +168,7 @@ export function useWebRTC(gameId) {
     async (fromUserId, offer) => {
       if (!gameId || !connected) return;
       if (!localStreamRef.current) {
-        await getLocalMedia(true, true);
+        await getLocalMedia(!audioOnlyRef.current, true);
         if (!localStreamRef.current) return;
       }
       try {

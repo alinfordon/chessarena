@@ -13,6 +13,7 @@ import {
   Volume2,
   VolumeX,
   Maximize,
+  Phone,
   Send,
   Crown,
   Eye,
@@ -43,12 +44,27 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatTime } from '@/utils/time';
 import { timeControlToCategory } from '@/utils/chess';
 
+function useCompactGameLayout() {
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1279px)');
+    const update = () => setCompact(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  return compact;
+}
+
 export default function GameClient({ gameId }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const compactLayout = useCompactGameLayout();
 
   const game = useGame(gameId);
-  const webrtc = useWebRTC(gameId);
+  const webrtc = useWebRTC(gameId, { audioOnly: compactLayout });
   const {
     state,
     clocks,
@@ -90,6 +106,7 @@ export default function GameClient({ gameId }) {
   const [newMessage, setNewMessage] = useState('');
   const chatRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteAudioRef = useRef(null);
   const localVideoRef = useRef(null);
 
   const [confirmResign, setConfirmResign] = useState(false);
@@ -143,10 +160,14 @@ export default function GameClient({ gameId }) {
   }, [error, toast, clearError]);
 
   useEffect(() => {
-    if (remoteVideoRef.current && webrtc.remoteStream) {
-      remoteVideoRef.current.srcObject = webrtc.remoteStream;
+    const stream = webrtc.remoteStream;
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = compactLayout ? null : stream;
     }
-  }, [webrtc.remoteStream]);
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = compactLayout ? stream : null;
+    }
+  }, [webrtc.remoteStream, compactLayout]);
 
   useEffect(() => {
     if (localVideoRef.current && webrtc.localStream) {
@@ -157,6 +178,9 @@ export default function GameClient({ gameId }) {
   useEffect(() => {
     if (remoteVideoRef.current) {
       remoteVideoRef.current.muted = !webrtc.speakerOn;
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = !webrtc.speakerOn;
     }
   }, [webrtc.speakerOn]);
 
@@ -262,6 +286,24 @@ export default function GameClient({ gameId }) {
     setNewMessage('');
   }
 
+  async function handleStartMediaCall({ video }) {
+    const opponentId = orientation === 'white' ? merged.blackPlayerId : merged.whitePlayerId;
+    if (!opponentId) return;
+    try {
+      await webrtc.getLocalMedia(video, true);
+      webrtc.offerCall(opponentId);
+      toast({
+        title: video ? 'Video call started' : 'Voice chat started',
+        variant: 'info',
+      });
+    } catch (e) {
+      toast({
+        title: e.message || (video ? 'Could not start camera' : 'Could not start microphone'),
+        variant: 'danger',
+      });
+    }
+  }
+
   function handleKeyDown(e) {
     if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
@@ -313,7 +355,7 @@ export default function GameClient({ gameId }) {
 
   return (
     <div
-      className="flex-1 flex flex-col min-h-0 w-full px-2 py-1.5 lg:px-2.5 lg:h-[calc(100dvh-4rem)] animate-fade-in"
+      className="flex-1 flex flex-col min-h-0 w-full px-2 py-1.5 xl:px-2.5 xl:h-[calc(100dvh-4rem)] animate-fade-in"
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
@@ -340,8 +382,9 @@ export default function GameClient({ gameId }) {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(240px,1fr)_minmax(0,1.35fr)_minmax(240px,1fr)] gap-2 items-stretch">
-        <aside className="order-2 lg:order-1 flex flex-col gap-1.5 min-h-0 overflow-hidden lg:h-0 lg:min-h-full">
+      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[minmax(240px,1fr)_minmax(0,1.35fr)_minmax(240px,1fr)] gap-2 items-stretch">
+        <aside className="order-2 xl:order-1 flex flex-col gap-1.5 min-h-0 overflow-hidden xl:h-0 xl:min-h-full">
+          <div className="hidden xl:contents">
           <PlayerStrip
             player={oppPlayer}
             side={orientation === 'white' ? 'black' : 'white'}
@@ -350,6 +393,7 @@ export default function GameClient({ gameId }) {
             time={oppTime}
             delta={oppPlayer.delta}
           />
+          </div>
 
           <TurnBanner
             waiting={!spectator && !isLive && !finished}
@@ -364,7 +408,7 @@ export default function GameClient({ gameId }) {
             onShowResult={() => setFinishModal(true)}
           />
 
-          <div className="rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/70 px-2.5 py-2 shrink-0">
+          <div className="hidden xl:block rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/70 px-2.5 py-2 shrink-0">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Last move</div>
@@ -385,6 +429,7 @@ export default function GameClient({ gameId }) {
           </div>
 
           <div className="flex flex-col gap-1.5 shrink-0">
+            <div className="hidden xl:block">
             <PlayerStrip
               player={mePlayer}
               side={orientation === 'white' ? 'white' : 'black'}
@@ -394,6 +439,7 @@ export default function GameClient({ gameId }) {
               time={meTime}
               delta={mePlayer.delta}
             />
+            </div>
 
             <div className="flex gap-1">
               <Button
@@ -441,16 +487,18 @@ export default function GameClient({ gameId }) {
             </div>
           </div>
 
+          <div className="hidden xl:flex flex-1 min-h-0">
           <MoveList
             moves={moves}
             currentIndex={replayIndex}
             onMoveClick={setReplayIndex}
-            className="flex-1 min-h-0"
+            className="flex-1 min-h-0 w-full"
           />
+          </div>
         </aside>
 
-        <div className="order-1 lg:order-2 min-h-0 min-w-0">
-          <div className="relative w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-5.5rem))]">
+        <div className="order-1 xl:order-2 min-h-0 min-w-0 flex flex-col gap-1.5">
+          <div className="relative w-full mx-auto aspect-square max-w-[min(100%,calc(100dvh-20rem))] xl:max-w-[min(100%,calc(100dvh-5.5rem))]">
             <ChessBoard
               fen={replayFen || merged.fen}
               orientation={orientation}
@@ -475,9 +523,30 @@ export default function GameClient({ gameId }) {
               </div>
             )}
           </div>
+          <div className="xl:hidden flex flex-col gap-1.5">
+            <CompactClocks
+              white={white}
+              black={black}
+              whiteTime={clocks.whiteTime}
+              blackTime={clocks.blackTime}
+              turn={clocks.turn}
+              finished={finished}
+            />
+            <CompactAudioBar
+              webrtc={webrtc}
+              spectator={spectator}
+              opponentName={oppPlayer.username}
+              remoteAudioRef={remoteAudioRef}
+              onStartVoice={() => handleStartMediaCall({ video: false })}
+              onReconnect={() => {
+                webrtc.reconnect();
+                toast({ title: 'Reconnecting voice...', variant: 'info' });
+              }}
+            />
+          </div>
         </div>
 
-        <aside className="order-3 flex flex-col gap-1.5 min-h-0 overflow-hidden lg:h-0 lg:min-h-full">
+        <aside className="hidden xl:flex order-3 flex-col gap-1.5 min-h-0 overflow-hidden xl:h-0 xl:min-h-full">
           <Card className="overflow-hidden flex-1 min-h-0 flex flex-col">
             <CardHeader className="!p-2 shrink-0">
               <CardTitle className="flex items-center justify-between !text-sm">
@@ -548,18 +617,7 @@ export default function GameClient({ gameId }) {
                   variant="primary"
                   size="sm"
                   className="w-full !h-8"
-                  onClick={async () => {
-                    const opponentId = orientation === 'white' ? merged.blackPlayerId : merged.whitePlayerId;
-                    if (opponentId) {
-                      try {
-                        await webrtc.getLocalMedia(true, true);
-                        webrtc.offerCall(opponentId);
-                        toast({ title: 'Video call started', variant: 'info' });
-                      } catch (e) {
-                        toast({ title: e.message || 'Could not start camera', variant: 'danger' });
-                      }
-                    }
-                  }}
+                  onClick={() => handleStartMediaCall({ video: true })}
                 >
                   <Video size={13} /> Start video
                 </Button>
@@ -926,6 +984,154 @@ function PlayerStrip({ player, side, me, active, ended, time, delta }) {
       >
         {formatTime(typeof time === 'number' ? time : 0)}
       </div>
+    </div>
+  );
+}
+
+function CompactClocks({ white, black, whiteTime, blackTime, turn, finished }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <CompactClockRow
+        player={white}
+        side="white"
+        time={whiteTime}
+        active={!finished && turn === 'w'}
+        ended={!!finished}
+      />
+      <CompactClockRow
+        player={black}
+        side="black"
+        time={blackTime}
+        active={!finished && turn === 'b'}
+        ended={!!finished}
+      />
+    </div>
+  );
+}
+
+function CompactClockRow({ player, side, time, active, ended }) {
+  const rating = typeof player?.rating === 'number' ? player.rating : 1200;
+  const low = typeof time === 'number' && time < 30;
+  const critical = typeof time === 'number' && time < 10;
+
+  return (
+    <div
+      className={clsx(
+        'flex items-center gap-2 px-3 py-2 rounded-xl border transition-all duration-200',
+        active
+          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-lg'
+          : 'bg-white/80 dark:bg-slate-900/70 border-slate-200/80 dark:border-slate-700/60 text-slate-800 dark:text-slate-100',
+        active && low && '!bg-red-600 !text-white shadow-red-600/40',
+        active && critical && 'animate-pulse'
+      )}
+    >
+      <Avatar
+        src={player.avatar}
+        alt={player.username}
+        size="sm"
+        status={active ? 'playing' : 'online'}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="font-black truncate text-sm leading-tight">{player.username}</div>
+        <div className={clsx('text-[10px] font-semibold', active ? 'opacity-70' : 'text-slate-500 dark:text-slate-400')}>
+          {side === 'white' ? 'White' : 'Black'} · {rating} Elo
+        </div>
+      </div>
+      <div
+        className={clsx(
+          'font-mono font-black tabular-nums leading-none text-[1.65rem]',
+          !active && !ended && 'opacity-50',
+          active && critical && 'tracking-tight'
+        )}
+      >
+        {formatTime(typeof time === 'number' ? time : 0)}
+      </div>
+    </div>
+  );
+}
+
+function CompactAudioBar({ webrtc, spectator, opponentName, remoteAudioRef, onStartVoice, onReconnect }) {
+  const failed = webrtc.connectionState === 'failed' || webrtc.iceState === 'failed';
+  const connecting = webrtc.connectionState === 'connecting' || webrtc.iceState === 'checking';
+
+  return (
+    <div className="rounded-xl border border-slate-200/80 dark:border-slate-700/60 bg-white/80 dark:bg-slate-900/70 p-2">
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Phone size={14} className="text-brand-500 shrink-0" />
+          <span className="text-xs font-bold truncate">Voice chat · {opponentName}</span>
+        </div>
+        {webrtc.connectionState === 'connected' ? (
+          <Badge variant="success" size="sm" dot>Live</Badge>
+        ) : failed ? (
+          <Badge variant="danger" size="sm" dot>Error</Badge>
+        ) : connecting ? (
+          <Badge variant="warning" size="sm" dot>…</Badge>
+        ) : !webrtc.isReady && !webrtc.remoteStream ? (
+          <Badge variant="default" size="sm">Off</Badge>
+        ) : null}
+      </div>
+
+      <audio
+        ref={remoteAudioRef}
+        autoPlay
+        muted={!webrtc.speakerOn}
+        className="sr-only"
+      />
+
+      {!spectator && !webrtc.remoteStream && !connecting && (
+        <Button
+          variant="primary"
+          size="sm"
+          className="w-full !h-8 mb-1.5"
+          onClick={onStartVoice}
+        >
+          <Mic size={13} /> Start voice chat
+        </Button>
+      )}
+
+      <div className={clsx('grid gap-1', failed ? 'grid-cols-3' : 'grid-cols-2')}>
+        <button
+          onClick={webrtc.toggleMicrophone}
+          className={clsx(
+            'p-1.5 rounded-md flex items-center justify-center gap-1.5 text-xs font-semibold transition-all',
+            webrtc.micOn
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+          )}
+          title={webrtc.micOn ? 'Mute mic' : 'Unmute mic'}
+        >
+          {webrtc.micOn ? <Mic size={14} /> : <MicOff size={14} />}
+          Mic
+        </button>
+        <button
+          onClick={webrtc.toggleSpeaker}
+          className={clsx(
+            'p-1.5 rounded-md flex items-center justify-center gap-1.5 text-xs font-semibold transition-all',
+            webrtc.speakerOn
+              ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
+              : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+          )}
+          title={webrtc.speakerOn ? 'Mute speakers' : 'Unmute speakers'}
+        >
+          {webrtc.speakerOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          Speaker
+        </button>
+        {failed && (
+          <button
+            onClick={onReconnect}
+            className="p-1.5 rounded-md bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center"
+            title="Reconnect"
+          >
+            <RotateCcw size={14} />
+          </button>
+        )}
+      </div>
+      {webrtc.error && (
+        <div className="mt-1.5 px-2 py-0.5 rounded-md bg-red-900/80 text-red-100 text-[10px] font-medium text-center">
+          {webrtc.error}
+        </div>
+      )}
     </div>
   );
 }
