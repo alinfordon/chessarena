@@ -24,6 +24,7 @@ export default function Badge({
   size = 'md',
   className = '',
   dot = false,
+  ...props
 }) {
   return (
     <span
@@ -33,6 +34,7 @@ export default function Badge({
         sizes[size],
         className
       )}
+      {...props}
     >
       {dot && (
         <span

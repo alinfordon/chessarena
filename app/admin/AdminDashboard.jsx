@@ -6,10 +6,12 @@ import {
   Ban,
   Crown,
   Loader2,
+  Pencil,
   Radio,
   Search,
   Shield,
   Trophy,
+  Trash2,
   Users,
   Swords,
   Check,
@@ -39,6 +41,87 @@ const TC_PRESETS = [
   { label: '30+0 Classical', initialTime: 1800, increment: 0 },
 ];
 
+const TOURNAMENT_TYPES = ['arena', 'swiss', 'round_robin', 'single_elimination'];
+const TOURNAMENT_STATUSES = ['registration', 'live', 'finished', 'cancelled'];
+
+function pad(n) {
+  return String(n).padStart(2, '0');
+}
+
+function toLocalInput(d) {
+  const date = d instanceof Date ? d : new Date(d);
+  const src = Number.isNaN(date.getTime()) ? new Date(Date.now() + 60 * 60 * 1000) : date;
+  return `${src.getFullYear()}-${pad(src.getMonth() + 1)}-${pad(src.getDate())}T${pad(src.getHours())}:${pad(src.getMinutes())}`;
+}
+
+function defaultForm() {
+  return {
+    name: '',
+    description: '',
+    type: 'arena',
+    tcIdx: 1,
+    maxPlayers: 32,
+    prizePool: '',
+    pointsWin: 2,
+    pointsDraw: 1,
+    pointsLoss: 0,
+    prizeFirst: 100,
+    prizeSecond: 50,
+    prizeThird: 25,
+    startAt: toLocalInput(Date.now() + 60 * 60 * 1000),
+    status: 'registration',
+    official: true,
+  };
+}
+
+function tournamentToForm(t) {
+  const idx = TC_PRESETS.findIndex(
+    (p) => p.initialTime === t.timeControl?.initialTime && p.increment === (t.timeControl?.increment || 0)
+  );
+  return {
+    name: t.name || '',
+    description: t.description || '',
+    type: t.type || 'arena',
+    tcIdx: idx >= 0 ? idx : 1,
+    maxPlayers: t.maxPlayers || 16,
+    prizePool: t.prizePool || '',
+    pointsWin: t.scoring?.win ?? 2,
+    pointsDraw: t.scoring?.draw ?? 1,
+    pointsLoss: t.scoring?.loss ?? 0,
+    prizeFirst: t.prizes?.first ?? 0,
+    prizeSecond: t.prizes?.second ?? 0,
+    prizeThird: t.prizes?.third ?? 0,
+    startAt: toLocalInput(t.startAt),
+    status: t.status || 'registration',
+    official: !!t.official,
+  };
+}
+
+function formPayload(form) {
+  const tc = TC_PRESETS[form.tcIdx] || TC_PRESETS[0];
+  return {
+    name: form.name.trim(),
+    description: form.description.trim(),
+    type: form.type,
+    timeControl: { initialTime: tc.initialTime, increment: tc.increment, label: tc.label.split(' ')[0] },
+    maxPlayers: form.maxPlayers,
+    prizePool: form.prizePool.trim(),
+    scoring: {
+      win: form.pointsWin,
+      draw: form.pointsDraw,
+      loss: form.pointsLoss,
+    },
+    prizes: {
+      first: form.prizeFirst,
+      second: form.prizeSecond,
+      third: form.prizeThird,
+    },
+    startAt: new Date(form.startAt).toISOString(),
+    official: form.official,
+    status: form.status,
+  };
+}
+
 function timeAgo(d) {
   if (!d) return '—';
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
@@ -67,26 +150,13 @@ export default function AdminDashboard() {
   const [banBusy, setBanBusy] = useState(false);
 
   const [creating, setCreating] = useState(false);
-  const [createBusy, setCreateBusy] = useState(false);
-  const [form, setForm] = useState(() => {
-    const d = new Date(Date.now() + 60 * 60 * 1000);
-    const pad = (n) => String(n).padStart(2, '0');
-    return {
-      name: '',
-      description: '',
-      type: 'arena',
-      tcIdx: 1,
-      maxPlayers: 32,
-      prizePool: '',
-      pointsWin: 2,
-      pointsDraw: 1,
-      pointsLoss: 0,
-      prizeFirst: 100,
-      prizeSecond: 50,
-      prizeThird: 25,
-      startAt: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`,
-    };
-  });
+  const [editing, setEditing] = useState(null);
+  const [formBusy, setFormBusy] = useState(false);
+  const [form, setForm] = useState(defaultForm);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const formOpen = creating || !!editing;
 
   const loadStats = useCallback(async () => {
     const r = await fetch('/api/admin/stats');
@@ -190,47 +260,70 @@ export default function AdminDashboard() {
     await loadStats().catch(() => {});
   }
 
-  async function createOfficial(e) {
-    e.preventDefault();
+  function openCreate() {
+    setEditing(null);
+    setForm(defaultForm());
+    setCreating(true);
+  }
+
+  function openEdit(t) {
+    setCreating(false);
+    setForm(tournamentToForm(t));
+    setEditing(t);
+  }
+
+  function closeForm() {
+    if (formBusy) return;
+    setCreating(false);
+    setEditing(null);
+  }
+
+  async function saveTournament(e) {
+    e?.preventDefault?.();
     if (form.name.trim().length < 3) return;
-    setCreateBusy(true);
+    setFormBusy(true);
     try {
-      const tc = TC_PRESETS[form.tcIdx] || TC_PRESETS[0];
-      const r = await fetch('/api/tournaments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          description: form.description.trim(),
-          type: form.type,
-          timeControl: { initialTime: tc.initialTime, increment: tc.increment, label: tc.label.split(' ')[0] },
-          maxPlayers: form.maxPlayers,
-          prizePool: form.prizePool.trim(),
-          scoring: {
-            win: form.pointsWin,
-            draw: form.pointsDraw,
-            loss: form.pointsLoss,
-          },
-          prizes: {
-            first: form.prizeFirst,
-            second: form.prizeSecond,
-            third: form.prizeThird,
-          },
-          startAt: new Date(form.startAt).toISOString(),
-          official: true,
-        }),
-      });
+      const payload = formPayload(form);
+      if (editing) {
+        await patchTournament(editing._id, payload);
+        toast({ title: 'Tournament updated', variant: 'success' });
+        setEditing(null);
+      } else {
+        const r = await fetch('/api/tournaments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, official: true }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.ok) throw new Error(d.error || 'Could not create tournament');
+        toast({ title: 'Official tournament created', variant: 'success' });
+        setCreating(false);
+        setForm(defaultForm());
+        await loadTournaments();
+        await loadStats().catch(() => {});
+      }
+    } catch (err) {
+      toast({ title: err.message || (editing ? 'Update failed' : 'Create failed'), variant: 'error' });
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteBusy(true);
+    try {
+      const r = await fetch(`/api/admin/tournaments/${deleteTarget._id}`, { method: 'DELETE' });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.ok) throw new Error(d.error || 'Could not create tournament');
-      toast({ title: 'Official tournament created', variant: 'success' });
-      setCreating(false);
-      setForm((f) => ({ ...f, name: '', description: '', prizePool: '' }));
+      if (!r.ok || !d.ok) throw new Error(d.error || 'Delete failed');
+      toast({ title: `${deleteTarget.name} deleted`, variant: 'warning' });
+      setDeleteTarget(null);
       await loadTournaments();
       await loadStats().catch(() => {});
-    } catch (err) {
-      toast({ title: err.message || 'Create failed', variant: 'error' });
+    } catch (e) {
+      toast({ title: e.message || 'Delete failed', variant: 'error' });
     } finally {
-      setCreateBusy(false);
+      setDeleteBusy(false);
     }
   }
 
@@ -331,14 +424,14 @@ export default function AdminDashboard() {
         <TabsContent value="tournaments">
           <div className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => setCreating(true)}>
+              <Button onClick={openCreate}>
                 <Trophy size={16} /> Create official tournament
               </Button>
             </div>
             <Card>
               <CardHeader>
                 <CardTitle>Tournaments</CardTitle>
-                <CardDescription>Mark events as official, cancel, or open registration</CardDescription>
+                <CardDescription>Edit details, mark official, cancel, or delete events</CardDescription>
               </CardHeader>
               <CardContent>
                 {tourneysLoading ? (
@@ -372,6 +465,9 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
+                          <Button size="sm" variant="secondary" onClick={() => openEdit(t)}>
+                            <Pencil size={14} /> Edit
+                          </Button>
                           <Button
                             size="sm"
                             variant={t.official ? 'secondary' : 'ghost'}
@@ -390,6 +486,9 @@ export default function AdminDashboard() {
                           )}
                           <Button size="sm" variant="ghost" href={`/tournaments/${t._id}`}>
                             Open
+                          </Button>
+                          <Button size="sm" variant="danger" onClick={() => setDeleteTarget(t)}>
+                            <Trash2 size={14} /> Delete
                           </Button>
                         </div>
                       </div>
@@ -441,21 +540,33 @@ export default function AdminDashboard() {
       </Modal>
 
       <Modal
-        isOpen={creating}
-        onClose={() => setCreating(false)}
-        title="Create official tournament"
-        description="Official events appear with a gold badge on the public tournament list."
+        isOpen={formOpen}
+        onClose={closeForm}
+        title={editing ? 'Edit tournament' : 'Create official tournament'}
+        description={
+          editing
+            ? 'Update format, time control, scoring, and prizes.'
+            : 'Official events appear with a gold badge on the public tournament list.'
+        }
         size="lg"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setCreating(false)} disabled={createBusy}>Cancel</Button>
-            <Button onClick={createOfficial} loading={createBusy} disabled={form.name.trim().length < 3}>
-              <Trophy size={16} /> Publish official
+            <Button variant="ghost" onClick={closeForm} disabled={formBusy}>Cancel</Button>
+            <Button onClick={saveTournament} loading={formBusy} disabled={form.name.trim().length < 3}>
+              {editing ? (
+                <>
+                  <Pencil size={16} /> Save changes
+                </>
+              ) : (
+                <>
+                  <Trophy size={16} /> Publish official
+                </>
+              )}
             </Button>
           </>
         }
       >
-        <form onSubmit={createOfficial} className="space-y-4">
+        <form onSubmit={saveTournament} className="space-y-4">
           <Input label="Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Weekly Arena #12" />
           <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
             Description
@@ -469,7 +580,7 @@ export default function AdminDashboard() {
           <div>
             <div className="text-sm font-semibold mb-2">Format</div>
             <div className="flex flex-wrap gap-2">
-              {['arena', 'swiss', 'round_robin', 'single_elimination'].map((type) => (
+              {TOURNAMENT_TYPES.map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -520,6 +631,36 @@ export default function AdminDashboard() {
               onChange={(e) => setForm((f) => ({ ...f, startAt: e.target.value }))}
             />
           </div>
+          {editing && (
+            <div>
+              <div className="text-sm font-semibold mb-2">Status</div>
+              <div className="flex flex-wrap gap-2">
+                {TOURNAMENT_STATUSES.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, status }))}
+                    className={clsx(
+                      'px-3 py-1.5 rounded-lg text-xs font-bold border',
+                      form.status === status
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/40 text-brand-700'
+                        : 'border-slate-200 dark:border-slate-700'
+                    )}
+                  >
+                    {status.replaceAll('_', ' ')}
+                  </button>
+                ))}
+              </div>
+              <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={form.official}
+                  onChange={(e) => setForm((f) => ({ ...f, official: e.target.checked }))}
+                />
+                Official tournament
+              </label>
+            </div>
+          )}
           <div>
             <div className="text-sm font-semibold mb-1">Match points</div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
@@ -594,6 +735,26 @@ export default function AdminDashboard() {
             placeholder="e.g. Champion badge"
           />
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => !deleteBusy && setDeleteTarget(null)}
+        title={`Delete ${deleteTarget?.name || 'tournament'}?`}
+        description="This removes the event and its registrations. Live games from this tournament will be aborted."
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleteBusy}>Keep</Button>
+            <Button variant="danger" onClick={confirmDelete} loading={deleteBusy}>
+              <Trash2 size={14} /> Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Players will no longer see this tournament. Finished games stay in player history.
+        </p>
       </Modal>
     </div>
   );

@@ -19,6 +19,7 @@ export async function GET() {
       tournaments: tournaments.map((t) => ({
         _id: String(t._id),
         name: t.name,
+        description: t.description || '',
         type: t.type,
         status: t.status,
         official: !!t.official,
